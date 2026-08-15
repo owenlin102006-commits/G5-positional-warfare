@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌐 東勢林場終端據點戰情室 | 據點攻防戰</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --conan-blue: #1e3a8a; /* Deep Navy */
+            --conan-red: #dc2626;  /* Bowtie Red */
+            --conan-gold: #f59e0b; /* Badge Gold */
+            --bg-dark: #f8fafc;
+        }
+        
+        body { 
+            font-family: 'Noto Sans TC', sans-serif; 
+            background-color: #e2e8f0; 
+            color: #1e293b;
+            background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        
+        .timer-font { font-family: 'Space Mono', monospace; letter-spacing: 0.05em; }
+        
+        /* 封鎖線風格 */
+        .crime-tape {
+            background: repeating-linear-gradient(
+                45deg,
+                #facc15,
+                #facc15 20px,
+                #111827 20px,
+                #111827 40px
+            );
+            border-top: 2px solid #000;
+            border-bottom: 2px solid #000;
+        }
+
+        /* 據點等級徽章 */
+        .level-badge-S { background-color: #fef08a; color: #854d0e; border: 1px solid #eab308; box-shadow: 0 0 10px rgba(234,179,8,0.5); }
+        .level-badge-A { background-color: #e0e7ff; color: #3730a3; border: 1px solid #6366f1; }
+        .level-badge-B { background-color: #dcfce7; color: #166534; border: 1px solid #22c55e; }
+
+        /* 小隊顏色 */
+        .team-color-0 { color: #64748b; border-color: #cbd5e1; background-color: #f1f5f9; } 
+        .team-color-1 { color: #b91c1c; border-color: #fca5a5; background-color: #fef2f2; }
+        .team-color-2 { color: #1d4ed8; border-color: #93c5fd; background-color: #eff6ff; }
+        .team-color-3 { color: #15803d; border-color: #86efac; background-color: #f0fdf4; }
+        .team-color-4 { color: #b45309; border-color: #fcd34d; background-color: #fffbeb; }
+        .team-color-5 { color: #6d28d9; border-color: #c4b5fd; background-color: #f5f3ff; }
+        .team-color-6 { color: #be185d; border-color: #f9a8d4; background-color: #fdf2f8; }
+
+        .card-shadow { box-shadow: 4px 4px 0px rgba(0,0,0,0.1); border: 2px solid #334155; }
+        .btn-shadow { box-shadow: 2px 2px 0px rgba(0,0,0,0.2); }
+        .btn-shadow:active { box-shadow: 0px 0px 0px rgba(0,0,0,0.2); transform: translate(2px, 2px); }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #e2e8f0; }
+        ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
+        
+        @keyframes scanline { 0% { transform: translateY(-100%); } 100% { transform: translateY(100%); } }
+        @keyframes ping-slow { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.6); } }
+        .animate-ping-slow { animation: ping-slow 1.4s ease-in-out infinite; }
+        
+        /* 檔案夾標籤效果 */
+        .folder-tab {
+            clip-path: polygon(0 0, 85% 0, 100% 100%, 0% 100%);
+        }
+    </style>
+</head>
+<body class="p-3 md:p-6 lg:p-8 min-h-screen relative">
+
+    <div id="custom-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center opacity-0 transition-opacity duration-300">
+        <div class="bg-white p-6 rounded-xl max-w-sm w-full mx-4 card-shadow transform transition-transform scale-95" id="custom-modal-content">
+            <div class="flex items-center gap-3 mb-4 border-b-2 border-red-600 pb-2">
+                <div class="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center text-red-600">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                </div>
+                <h3 id="modal-title" class="text-xl font-bold text-slate-800">搜查提示</h3>
+            </div>
+            <p id="modal-message" class="text-slate-600 text-sm mb-5 leading-relaxed font-medium">訊息內容</p>
+            <input type="password" id="modal-input" class="hidden w-full bg-slate-100 border-2 border-slate-300 rounded-lg px-3 py-2.5 text-slate-800 mb-5 focus:outline-none focus:border-red-500 transition font-mono tracking-widest text-center text-lg" placeholder="輸入解密金鑰" />
+            <div class="flex justify-end gap-3">
+                <button id="modal-cancel" class="hidden px-5 py-2.5 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm font-bold transition btn-shadow w-full sm:w-auto">取消</button>
+                <button id="modal-ok" class="px-5 py-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-bold transition btn-shadow w-full sm:w-auto">確認執行</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="announcement-banner" class="hidden max-w-[1400px] mx-auto mb-4 md:mb-6 bg-white card-shadow rounded-xl flex flex-col overflow-hidden">
+        <div class="crime-tape h-4 w-full"></div>
+        <div class="p-3 md:p-4 flex items-center gap-3 md:gap-4 relative overflow-hidden">
+            <div class="bg-yellow-100 p-2 md:p-3 rounded-full border-2 border-yellow-400 relative z-10 flex-shrink-0">
+                <i class="fa-solid fa-triangle-exclamation text-yellow-600 fa-lg md:fa-xl animate-bounce"></i>
+            </div>
+            <div class="relative z-10 flex-1">
+                <h3 class="text-slate-500 font-bold text-[10px] md:text-xs tracking-widest mb-0.5 md:mb-1">🚨 警視廳緊急通報</h3>
+                <p id="announcement-text" class="text-slate-800 text-sm md:text-xl font-black tracking-wide leading-tight">通報讀取中...</p>
+            </div>
+        </div>
+        <div class="crime-tape h-4 w-full"></div>
+    </div>
+
+    <div id="battle-ticker" class="hidden sticky top-2 z-40 max-w-[1400px] mx-auto mb-4 bg-white/90 backdrop-blur card-shadow rounded-full px-4 py-2 flex items-center gap-3 overflow-x-auto">
+        <span class="flex items-center gap-1.5 text-red-600 text-xs font-black shrink-0 pr-3 border-r-2 border-slate-300">
+            <i class="fa-solid fa-siren-on animate-pulse"></i> 衝突發生中
+        </span>
+        <div id="battle-ticker-list" class="flex items-center gap-2"></div>
+    </div>
+
+    <header class="max-w-[1400px] mx-auto flex justify-between items-end mb-6 pb-4 border-b-4 border-[#1e3a8a]">
+        <div class="flex items-center gap-3 md:gap-4">
+            <div class="bg-[#1e3a8a] text-white p-3 md:p-4 rounded-xl btn-shadow relative shadow-lg shadow-blue-900/20">
+                <i class="fa-solid fa-user-secret fa-xl md:fa-2xl"></i>
+                <div class="absolute -bottom-2 -right-2 bg-red-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full border-2 border-white">G5-1</div>
+            </div>
+            <div>
+                <h1 class="text-2xl md:text-4xl font-black text-[#1e3a8a] tracking-tight mb-1">
+                    東勢林場終端據點戰情室
+                </h1>
+                <p class="text-xs md:text-sm text-slate-500 font-bold tracking-widest">DONGSHI FOREST TACTICAL OPERATIONS CENTER</p>
+            </div>
+        </div>
+        <div class="flex flex-col gap-2">
+            <button id="admin-login-btn" class="bg-slate-800 hover:bg-slate-700 text-white transition px-4 md:px-6 py-2.5 rounded-lg text-xs md:text-sm font-bold btn-shadow flex items-center gap-2">
+                <i class="fa-solid fa-id-badge"></i> 搜查官登入
+            </button>
+            <button id="admin-logout-btn" class="hidden bg-slate-200 hover:bg-slate-300 text-slate-700 border-2 border-slate-400 transition px-4 md:px-6 py-2 rounded-lg text-xs md:text-sm font-bold btn-shadow flex items-center gap-2">
+                <i class="fa-solid fa-door-open"></i> 結束值勤
+            </button>
+        </div>
+    </header>
+
+    <main class="max-w-[1400px] mx-auto grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+
+        <!-- Mobile Tab Bar -->
+        <div id="mobile-tab-bar" class="hidden xl:hidden col-span-1 w-full grid grid-cols-2 gap-3 mb-2">
+            <button id="tab-status-btn" onclick="window.setMobileTab('status')" class="py-3 rounded-lg text-sm font-bold transition bg-[#1e3a8a] text-white btn-shadow border-2 border-[#1e3a8a]">
+                <i class="fa-solid fa-map-location-dot mr-1"></i> 搜查現場
+            </button>
+            <button id="tab-admin-btn" onclick="window.setMobileTab('admin')" class="py-3 rounded-lg text-sm font-bold transition bg-white text-slate-600 border-2 border-slate-300 btn-shadow">
+                <i class="fa-solid fa-walkie-talkie mr-1"></i> 控制終端
+            </button>
+        </div>
+        
+        <section id="leaderboard-section" class="xl:col-span-12 w-full mb-2 hidden">
+            <div class="flex items-center gap-2 mb-3 pl-1">
+                <i class="fa-solid fa-chart-line text-blue-700"></i>
+                <h2 class="font-black text-base md:text-lg text-slate-800 tracking-wide">小隊搜查資金即時榜</h2>
+            </div>
+            <!-- 修正手機版版面與排版，加入 pt-6 避免標籤被切掉 -->
+            <div id="global-leaderboard" class="flex overflow-x-auto gap-3 md:gap-4 w-full pt-6 pb-4 snap-x snap-mandatory px-2">
+                <!-- 由 JS 動態生成 -->
+            </div>
+        </section>
+
+        <div id="admin-section" class="hidden xl:col-span-5 flex flex-col gap-6 w-full max-w-[100vw]">
+            <div class="bg-white rounded-xl overflow-hidden card-shadow relative">
+                <!-- Top decorative bar -->
+                <div class="h-3 w-full bg-slate-800 flex items-center px-2 gap-1">
+                    <div class="w-2 h-2 rounded-full bg-red-500"></div>
+                    <div class="w-2 h-2 rounded-full bg-yellow-400"></div>
+                    <div class="w-2 h-2 rounded-full bg-green-500"></div>
+                </div>
+                
+                <div class="p-5 pb-3 border-b-2 border-slate-100">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-600 border border-slate-300">
+                            <i class="fa-solid fa-desktop fa-lg"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-black text-slate-800 flex items-center gap-2 leading-none" id="admin-role-title">警視廳指揮中心</h2>
+                            <p class="text-xs text-slate-500 mt-1 font-medium">系統權限：已授權變更據點狀態與發送通報。</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Global Alerts Tools (Super Admin Only) -->
+                <div id="admin-global-tools" class="px-5 py-4 border-b border-slate-200 bg-slate-50 hidden">
+                    <label class="text-xs font-bold text-slate-500 mb-2 block"><i class="fa-solid fa-tower-broadcast mr-1"></i> 全域廣播系統</label>
+                    <div class="flex flex-col sm:flex-row gap-2">
+                        <input type="text" id="admin-alert-input" class="flex-1 bg-white border-2 border-slate-300 text-slate-800 rounded-lg px-3 py-2 text-sm outline-none focus:border-red-500 transition shadow-inner" placeholder="輸入緊急通報內容...">
+                        <div class="flex gap-2">
+                            <button onclick="window.pushAlert()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-bold w-full sm:w-auto transition btn-shadow">發布</button>
+                            <button onclick="window.clearAlert()" class="bg-slate-300 hover:bg-slate-400 text-slate-700 px-4 py-2 rounded-lg text-sm font-bold w-full sm:w-auto transition btn-shadow">清除</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- POI Management List -->
+                <div class="px-4 py-3 flex flex-col gap-4 bg-slate-100" id="admin-poi-list">
+                    <!-- 由 JS 動態生成 -->
+                </div>
+
+                <!-- Danger Zone (Super Admin Only) -->
+                <div id="admin-danger-zone" class="px-5 pb-5 pt-4 border-t-2 border-slate-200 bg-white mt-auto flex flex-col sm:flex-row justify-between items-center gap-3 hidden">
+                    <div class="flex items-center gap-2 border-2 border-slate-300 bg-slate-50 rounded-lg p-1.5 max-w-[200px] w-full sm:w-auto">
+                        <i class="fa-solid fa-image text-slate-400 ml-1"></i>
+                        <span class="text-xs text-slate-600 truncate flex-1 font-medium" id="map-file-name">更新作戰地圖...</span>
+                        <label class="bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold px-3 py-1.5 rounded cursor-pointer shrink-0 transition btn-shadow">
+                            瀏覽
+                            <input type="file" id="map-upload" class="hidden" accept="image/*">
+                        </label>
+                    </div>
+                    <button id="reset-game-btn" class="relative overflow-hidden bg-white hover:bg-red-50 text-red-600 border-2 border-red-200 px-4 py-2.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-2 btn-shadow w-full sm:w-auto group">
+                        <div id="reset-progress" class="absolute inset-0 bg-red-100 w-0 z-0"></div>
+                        <i class="fa-solid fa-triangle-exclamation relative z-10 group-hover:animate-pulse"></i> 
+                        <span class="relative z-10">長按 2 秒重置系統</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="status-section" class="xl:col-span-12 flex flex-col gap-4 transition-all w-full">
+            
+            <div id="map-display-container" class="hidden w-full bg-white card-shadow rounded-xl overflow-hidden">
+                <div class="px-4 py-2 bg-slate-800 flex justify-between items-center">
+                    <span class="text-sm font-bold text-white tracking-widest"><i class="fa-solid fa-map-location text-red-400 mr-2"></i>東勢林場調查區域圖</span>
+                </div>
+                <div class="p-2 bg-slate-100">
+                    <img id="map-image" src="" alt="作戰地圖" class="w-full h-auto object-contain max-h-[250px] md:max-h-[400px] rounded border border-slate-300 bg-white">
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-2 pl-1 mb-1 mt-2">
+                <div class="w-6 h-6 bg-red-600 rounded flex items-center justify-center text-white transform -rotate-6">
+                    <i class="fa-solid fa-thumbtack text-xs"></i>
+                </div>
+                <h2 class="font-black text-lg md:text-xl text-slate-800 tracking-wider">據點監視檔案</h2>
+            </div>
+
+            <div id="poi-cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-2 gap-5 w-full pb-10">
+                <!-- 載入中動畫 -->
+                <div class="w-full xl:col-span-2 bg-white card-shadow rounded-xl p-12 flex flex-col items-center justify-center text-slate-500">
+                    <i class="fa-solid fa-magnifying-glass fa-spin fa-3x mb-4 text-slate-300"></i>
+                    <p class="text-sm font-bold tracking-widest text-slate-400">正在連線至警視廳資料庫...</p>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, doc, onSnapshot, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // 串接 Firebase 後端設定
+        const firebaseConfig = {
+            apiKey: "AIzaSyAxxCVI23NFoH_VzpMg-HU8uzJqolgTPbo",
+            authDomain: "g5-positional-warfare.firebaseapp.com",
+            projectId: "g5-positional-warfare",
+            storageBucket: "g5-positional-warfare.firebasestorage.app",
+            messagingSenderId: "31028567681",
+            appId: "1:31028567681:web:3b6bf0f967b9d766b57780"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        
+        // 建立專屬的柯南版資料節點
+        const gameRef = doc(db, 'rpg_game', 'g5_1_conan_state_v1'); 
+
+        let adminRole = null; 
+        let currentState = null;
+        let timerInterval = null;
+
+        const rolePasswords = {
+            '1150920': 'super', // 總部密碼
+            '7701': 'S1',       // 侏儸紀公園
+            '7702': 'A1',       // 櫻花亭
+            '7703': 'A2',       // 得福亭
+            '7704': 'B1',       // 白鴿廣場
+            '7705': 'B2'        // 森林廣場
+        };
+
+        const defaultState = {
+            mapUrl: "", alertMsg: "",
+            teams: [
+                { name: "第 1 小隊", wealth: 0 }, { name: "第 2 小隊", wealth: 0 },
+                { name: "第 3 小隊", wealth: 0 }, { name: "第 4 小隊", wealth: 0 },
+                { name: "第 5 小隊", wealth: 0 }, { name: "第 6 小隊", wealth: 0 }
+            ],
+            pois: [
+                { id: "S1", name: "侏儸紀公園", level: "S", owner: "未佔領", income: 120, isHidden: false, isBattling: false, battleStartTime: 0, accumulatedTime: 0, lastStartTime: 0, protectedUntil: 0 },
+                { id: "A1", name: "櫻花亭", level: "A", owner: "未佔領", income: 90, isHidden: false, isBattling: false, battleStartTime: 0, accumulatedTime: 0, lastStartTime: 0, protectedUntil: 0 },
+                { id: "A2", name: "得福亭", level: "A", owner: "未佔領", income: 90, isHidden: false, isBattling: false, battleStartTime: 0, accumulatedTime: 0, lastStartTime: 0, protectedUntil: 0 },
+                { id: "B1", name: "白鴿廣場", level: "B", owner: "未佔領", income: 60, isHidden: false, isBattling: false, battleStartTime: 0, accumulatedTime: 0, lastStartTime: 0, protectedUntil: 0 },
+                { id: "B2", name: "森林廣場", level: "B", owner: "未佔領", income: 60, isHidden: false, isBattling: false, battleStartTime: 0, accumulatedTime: 0, lastStartTime: 0, protectedUntil: 0 }
+            ]
+        };
+
+        // Firebase 監聽器
+        onSnapshot(gameRef, (snap) => {
+            if (!snap.exists()) { setDoc(gameRef, defaultState); return; }
+            const data = snap.data();
+            // 防呆機制：若抓到舊資料(不是5個據點)，強制初始化
+            if (!data.pois || data.pois.length !== 5) {
+                setDoc(gameRef, defaultState);
+                return;
+            }
+            currentState = data;
+            renderUI();
+        });
+
+        // --- STREAMING_CHUNK: Modal Logic ---
+        function showModal(title, message, isPrompt = false, isConfirm = false, inputType = 'password') {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('custom-modal');
+                const content = document.getElementById('custom-modal-content');
+                const input = document.getElementById('modal-input');
+                const cancelBtn = document.getElementById('modal-cancel');
+                const okBtn = document.getElementById('modal-ok');
+
+                document.getElementById('modal-title').innerHTML = title;
+                document.getElementById('modal-message').innerHTML = message;
+                
+                // 動態調整輸入框類型（支援一般文字與密碼輸入）
+                input.type = inputType;
+                input.placeholder = inputType === 'text' ? '請輸入新內容...' : '輸入解密金鑰';
+                
+                if (isPrompt) { 
+                    input.classList.remove('hidden'); cancelBtn.classList.remove('hidden'); input.value = ''; 
+                } else if (isConfirm) {
+                    input.classList.add('hidden'); cancelBtn.classList.remove('hidden'); 
+                } else { 
+                    input.classList.add('hidden'); cancelBtn.classList.add('hidden'); 
+                }
+                
+                modal.classList.remove('hidden');
+                setTimeout(() => { modal.classList.remove('opacity-0'); content.classList.remove('scale-95'); if(isPrompt) input.focus(); }, 10);
+
+                const closeModal = (val) => {
+                    modal.classList.add('opacity-0'); content.classList.add('scale-95');
+                    setTimeout(() => { modal.classList.add('hidden'); resolve(val); }, 300);
+                };
+
+                // 移除舊的 event listeners 避免重複綁定
+                okBtn.replaceWith(okBtn.cloneNode(true));
+                cancelBtn.replaceWith(cancelBtn.cloneNode(true));
+                input.replaceWith(input.cloneNode(true));
+                
+                const newOkBtn = document.getElementById('modal-ok');
+                const newCancelBtn = document.getElementById('modal-cancel');
+                const newInput = document.getElementById('modal-input');
+
+                newOkBtn.onclick = () => closeModal(isPrompt ? newInput.value : true);
+                newCancelBtn.onclick = () => closeModal(isPrompt ? null : false);
+                newInput.onkeydown = (e) => { if(e.key === 'Enter') newOkBtn.click(); };
+            });
+        }
+
+        // --- STREAMING_CHUNK: Core Rendering ---
+        function renderUI() {
+            if (!currentState) return;
+            
+            // 1. 公告與地圖
+            const banner = document.getElementById('announcement-banner');
+            if (currentState.alertMsg) {
+                document.getElementById('announcement-text').innerText = currentState.alertMsg;
+                banner.classList.remove('hidden');
+            } else { banner.classList.add('hidden'); }
+            
+            if (currentState.mapUrl) {
+                document.getElementById('map-image').src = currentState.mapUrl;
+                document.getElementById('map-display-container').classList.remove('hidden');
+            } else {
+                document.getElementById('map-display-container').classList.add('hidden');
+            }
+
+            // 2. 財富記分板
+            const leaderboardSection = document.getElementById('leaderboard-section');
+            if (adminRole) {
+                leaderboardSection.classList.remove('hidden');
+            } else {
+                leaderboardSection.classList.add('hidden');
+            }
+
+            const teamIncomes = {};
+            currentState.teams.forEach(t => teamIncomes[t.name] = 0);
+            currentState.pois.forEach(poi => {
+                if (poi.owner !== '未佔領' && teamIncomes[poi.owner] !== undefined) {
+                    teamIncomes[poi.owner] += poi.income;
+                }
+            });
+
+            document.getElementById('global-leaderboard').innerHTML = currentState.teams.map(t => {
+                const isLeading = teamIncomes[t.name] > 0;
+                let teamNum = 0;
+                if (t.name.includes("第")) teamNum = parseInt(t.name.match(/\d+/)[0]);
+
+                return `
+                <div class="bg-white border-2 ${isLeading ? 'border-yellow-400 shadow-[0_4px_0_rgba(250,204,21,1)]' : 'border-slate-300 card-shadow'} p-3 md:p-4 rounded-xl text-center relative flex flex-col justify-center transform transition shrink-0 w-32 md:w-36 snap-start">
+                    ${isLeading ? '<div class="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-yellow-400 text-yellow-900 text-[10px] md:text-xs font-black px-3 py-0.5 rounded-full border border-yellow-500 whitespace-nowrap shadow-sm z-10"><i class="fa-solid fa-arrow-up"></i> 收入中</div>' : ''}
+                    <div class="text-xs md:text-sm text-slate-500 font-bold mb-1 flex items-center justify-center gap-1">
+                        <span class="w-2 h-2 rounded-full team-color-${teamNum} border border-current"></span> ${t.name}
+                    </div>
+                    <div class="text-2xl md:text-3xl font-black text-slate-800 tracking-wider font-mono">$${t.wealth}</div>
+                    <div class="mt-2 inline-flex items-center justify-center gap-1 ${isLeading ? 'bg-yellow-100 text-yellow-700 border-yellow-300' : 'bg-slate-100 text-slate-400 border-slate-200'} text-[10px] md:text-xs font-bold px-2 py-1 rounded-md border">
+                        +${teamIncomes[t.name]} <span class="text-[9px] md:text-[10px]">/ 10m</span>
+                    </div>
+                </div>
+            `}).join('');
+
+            // 3. 據點卡片渲染
+            const cardsContainer = document.getElementById('poi-cards-container');
+            const levelGroups = { S: [], A: [], B: [] };
+            const battlingPois = [];
+
+            currentState.pois.forEach((poi, idx) => {
+                if (poi.isHidden && !adminRole) return;
+                if (levelGroups[poi.level]) levelGroups[poi.level].push({ poi, idx });
+                if (poi.isBattling) battlingPois.push({ poi, idx });
+            });
+
+            const renderCard = ({ poi, idx }, big = false) => {
+                let teamNum = 0;
+                if (poi.owner.includes("第")) teamNum = parseInt(poi.owner.match(/\d+/)[0]);
+
+                return `
+                    <div id="poi-card-${idx}" class="bg-white card-shadow rounded-xl flex flex-col relative transition-all scroll-mt-24 ${poi.isBattling ? 'border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)]' : ''}">
+                        
+                        <div class="absolute -top-[2px] -left-[2px] bg-slate-800 text-white text-[10px] font-bold px-3 py-1 folder-tab z-10 border-b border-r border-slate-700">
+                            FILE: ${poi.id}
+                        </div>
+
+                        ${poi.isHidden ? '<div class="absolute -top-3 -right-3 bg-red-600 text-white text-[10px] px-2 py-1 rounded font-black z-20 shadow-md transform rotate-12 border-2 border-white"><i class="fa-solid fa-eye-slash"></i> 封存機密</div>' : ''}
+                        
+                        <div class="${big ? 'p-5 md:p-6' : 'p-4'} flex-1">
+                            <div class="flex justify-between items-start mb-4 mt-2">
+                                <div class="flex flex-col items-start gap-1">
+                                    <h3 class="${big ? 'text-xl md:text-2xl' : 'text-lg md:text-xl'} font-black text-slate-800 leading-tight">${poi.name}</h3>
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-black level-badge-${poi.level} tracking-widest">${poi.level} CLASS</span>
+                                </div>
+                                <div class="text-right bg-slate-50 border border-slate-200 rounded-lg px-2 py-1">
+                                    <div class="text-[10px] text-slate-400 font-bold mb-0.5">預估價值</div>
+                                    <div class="text-slate-700 font-black text-sm md:text-base leading-none">
+                                        $${poi.income}<span class="text-[10px] text-slate-400 font-normal">/10m</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="border-2 border-slate-200 rounded-lg p-3 flex flex-col items-center justify-center gap-2 mb-4 bg-slate-50 relative overflow-hidden team-color-${teamNum}">
+                                <div class="absolute inset-0 bg-current opacity-10"></div>
+                                <span class="text-xs font-bold text-slate-500 z-10 uppercase tracking-widest">CURRENT OWNER</span>
+                                <div class="flex items-center gap-2 z-10">
+                                    <div class="w-6 h-6 rounded flex items-center justify-center bg-white border-2 border-current shadow-sm">
+                                        <i class="fa-solid fa-magnifying-glass"></i>
+                                    </div>
+                                    <span class="text-lg md:text-xl font-black ${teamNum===0?'text-slate-500':'text-slate-800'}">${poi.owner}</span>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-3">
+                                ${poi.isBattling ? `
+                                    <div class="bg-red-50 border-2 border-red-200 rounded-lg p-2.5 flex flex-col items-center justify-center relative overflow-hidden">
+                                        <div class="absolute inset-0 crime-tape opacity-20"></div>
+                                        <span class="text-red-700 font-black text-[10px] mb-1 z-10 bg-white/80 px-1 rounded"><i class="fa-solid fa-siren-on animate-pulse"></i> 衝突爆發</span>
+                                        <span class="timer-font text-red-600 text-base md:text-lg font-black z-10 bg-white/80 px-2 rounded border border-red-100" id="battle-timer-${idx}">00:00</span>
+                                    </div>
+                                ` : `
+                                    <div class="bg-slate-50 border-2 border-dashed border-slate-300 rounded-lg p-2.5 flex flex-col items-center justify-center cursor-default select-none">
+                                        <span class="text-[10px] text-slate-400 font-bold mb-1 tracking-widest">佔領時長</span>
+                                        <span class="timer-font text-slate-700 text-sm md:text-base font-bold" id="occ-timer-${idx}">00:00:00</span>
+                                    </div>
+                                `}
+                                <div class="rounded-lg p-2.5 flex flex-col items-center justify-center border-2" id="shield-container-${idx}"></div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            };
+
+            const levelMeta = {
+                S: { label: 'S級 重點調查區', icon: 'fa-star' },
+                A: { label: 'A級 警戒區域', icon: 'fa-exclamation-triangle' },
+                B: { label: 'B級 一般區域', icon: 'fa-search' }
+            };
+
+            let cardsHTML = '';
+            ['S', 'A', 'B'].forEach(level => {
+                const group = levelGroups[level];
+                if (!group.length) return;
+                const meta = levelMeta[level];
+                cardsHTML += `
+                    <div class="col-span-full flex items-center gap-3 mt-4 mb-2 first:mt-0">
+                        <div class="bg-slate-800 text-white w-8 h-8 rounded-full flex items-center justify-center shadow-md">
+                            <i class="fa-solid ${meta.icon} text-sm"></i>
+                        </div>
+                        <span class="text-sm font-black text-slate-700 tracking-widest">${meta.label}</span>
+                        <div class="flex-1 h-0.5 bg-slate-300"></div>
+                    </div>
+                `;
+                if (level === 'S') {
+                    cardsHTML += `<div class="col-span-full grid grid-cols-1 md:grid-cols-2 gap-5">${group.map(item => renderCard(item, true)).join('')}</div>`;
+                } else {
+                    cardsHTML += group.map(item => renderCard(item, false)).join('');
+                }
+            });
+            cardsContainer.innerHTML = cardsHTML;
+
+            // 🥊 戰況速覽浮動列
+            const ticker = document.getElementById('battle-ticker');
+            const tickerList = document.getElementById('battle-ticker-list');
+            if (battlingPois.length > 0) {
+                ticker.classList.remove('hidden');
+                tickerList.innerHTML = battlingPois.map(({ poi, idx }) => `
+                    <button onclick="document.getElementById('poi-card-${idx}')?.scrollIntoView({behavior:'smooth', block:'center'})" class="shrink-0 flex items-center gap-1.5 bg-white hover:bg-slate-50 border-2 border-red-300 text-slate-700 text-xs font-bold px-3 py-1.5 rounded-full transition btn-shadow">
+                        <span class="w-2 h-2 rounded-full bg-red-500 animate-ping-slow"></span> ${poi.name}
+                    </button>
+                `).join('');
+            } else {
+                ticker.classList.add('hidden');
+                tickerList.innerHTML = '';
+            }
+
+            // 4. STREAMING_CHUNK: Admin Dashboard Rendering
+            if (adminRole) {
+                const globalTools = document.getElementById('admin-global-tools');
+                const dangerZone = document.getElementById('admin-danger-zone');
+                const roleTitle = document.getElementById('admin-role-title');
+
+                if (adminRole === 'super') {
+                    globalTools.classList.remove('hidden');
+                    dangerZone.classList.remove('hidden');
+                    dangerZone.classList.add('flex');
+                    roleTitle.innerText = "警視廳指揮中心";
+                } else {
+                    globalTools.classList.add('hidden');
+                    dangerZone.classList.add('hidden');
+                    dangerZone.classList.remove('flex');
+                    const poiName = currentState.pois.find(p => p.id === adminRole).name;
+                    roleTitle.innerText = `現場搜查官 - ${poiName}`;
+                }
+
+                const visiblePois = adminRole === 'super' ? currentState.pois : currentState.pois.filter(p => p.id === adminRole);
+
+                document.getElementById('admin-poi-list').innerHTML = visiblePois.map((poi) => {
+                    const idx = currentState.pois.findIndex(p => p.id === poi.id);
+                    const isPoiProtected = poi.protectedUntil > Date.now();
+
+                    return `
+                    <div class="bg-white border-2 border-slate-200 p-4 rounded-xl flex flex-col gap-3 relative btn-shadow ${poi.isBattling ? 'border-red-400 ring-2 ring-red-100' : ''}">
+                        
+                        <div class="flex justify-between items-center border-b-2 border-slate-100 pb-2">
+                            <span class="text-slate-800 font-black text-sm flex items-center gap-2">
+                                <i class="fa-solid fa-folder-open text-slate-400"></i> ${poi.name} 
+                                <button onclick="window.renamePoi(${idx})" class="text-slate-400 hover:text-blue-700 transition" title="修改名稱"><i class="fa-solid fa-pen text-[10px]"></i></button>
+                                <span class="bg-slate-100 text-slate-500 text-[10px] px-1.5 py-0.5 rounded border border-slate-200">${poi.level}級</span>
+                            </span>
+                            <div class="flex gap-2">
+                                <button onclick="window.toggleHide(${idx})" class="text-sm w-8 h-8 flex items-center justify-center rounded-lg ${poi.isHidden ? 'bg-red-100 text-red-600 border border-red-200' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'} transition shadow-sm" title="封存/解封">
+                                    <i class="fa-solid ${poi.isHidden ? 'fa-eye-slash' : 'fa-eye'}"></i>
+                                </button>
+                                <button onclick="window.toggleBattle(${idx})" class="text-xs px-4 py-1.5 rounded-lg font-black transition btn-shadow border-2 ${poi.isBattling ? 'bg-red-600 text-white border-red-700 hover:bg-red-700 animate-pulse' : (isPoiProtected ? 'bg-slate-200 text-slate-400 border-slate-300 cursor-not-allowed' : 'bg-yellow-400 text-yellow-900 border-yellow-500 hover:bg-yellow-500 active:scale-95')}" ${(!poi.isBattling && isPoiProtected) ? 'disabled title="封鎖期間無法介入"' : ''}>
+                                    ${poi.isBattling ? '🛑 終止衝突' : '⚔️ 判定衝突'}
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col gap-1">
+                            <label class="text-[10px] font-bold text-slate-400">當前佔領小隊</label>
+                            <select id="admin-select-${idx}" onchange="window.confirmManualChange(${idx})" class="bg-slate-50 border-2 border-slate-300 text-slate-700 font-bold rounded-lg px-3 py-2 text-sm w-full outline-none cursor-pointer hover:border-[#1e3a8a] transition shadow-inner ${poi.isBattling ? 'bg-slate-200 text-slate-400 cursor-not-allowed border-slate-200' : ''}" ${poi.isBattling ? 'disabled' : ''}>
+                                ${["未佔領", "第 1 小隊", "第 2 小隊", "第 3 小隊", "第 4 小隊", "第 5 小隊", "第 6 小隊"].map(opt => `<option value="${opt}" ${poi.owner === opt ? 'selected' : ''}>${opt}</option>`).join('')}
+                            </select>
+                        </div>
+
+                        <div class="flex gap-2 pt-1">
+                            <button onclick="window.setShield(${idx}, 5)" class="flex-1 ${poi.isBattling ? 'bg-slate-100 text-slate-300 border-slate-200 cursor-not-allowed' : 'bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-700'} border-2 py-2 rounded-lg text-xs font-bold transition btn-shadow" ${poi.isBattling ? 'disabled' : ''}><i class="fa-solid fa-shield mr-1"></i>5m 封鎖</button>
+                            <button onclick="window.setShield(${idx}, 10)" class="flex-1 ${poi.isBattling ? 'bg-slate-100 text-slate-300 border-slate-200 cursor-not-allowed' : 'bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-700'} border-2 py-2 rounded-lg text-xs font-bold transition btn-shadow" ${poi.isBattling ? 'disabled' : ''}><i class="fa-solid fa-shield-halved mr-1"></i>10m 封鎖</button>
+                            <button onclick="window.setShield(${idx}, 0)" class="w-10 bg-slate-100 hover:bg-slate-200 border-2 border-slate-300 text-slate-500 py-2 rounded-lg flex items-center justify-center transition btn-shadow" title="解除封鎖"><i class="fa-solid fa-unlock"></i></button>
+                        </div>
+                    </div>
+                `}).join('');
+            }
+
+            if (!timerInterval) timerInterval = setInterval(updateDynamicData, 1000);
+            updateDynamicData(); 
+        }
+
+        // --- STREAMING_CHUNK: Timers Logic ---
+        function updateDynamicData() {
+            if (!currentState) return;
+            const now = Date.now();
+
+            currentState.pois.forEach((poi, idx) => {
+                if (poi.isHidden && !adminRole) return;
+
+                const shieldContainer = document.getElementById(`shield-container-${idx}`);
+                const isProtected = poi.protectedUntil > now;
+                if (shieldContainer) {
+                    if (isProtected) {
+                        const diff = poi.protectedUntil - now;
+                        const m = Math.floor(diff / 60000).toString().padStart(2, '0');
+                        const s = Math.floor((diff % 60000) / 1000).toString().padStart(2, '0');
+                        shieldContainer.className = "bg-blue-50 border-2 border-dashed border-blue-300 rounded-lg p-2.5 flex flex-col items-center justify-center cursor-default select-none";
+                        shieldContainer.innerHTML = `<span class="text-blue-700 font-black text-[10px] mb-1 tracking-widest"><i class="fa-solid fa-lock"></i> 現場封鎖中</span><span class="timer-font text-blue-600 text-sm font-bold">${m}:${s}</span>`;
+                    } else if (poi.isBattling) {
+                        shieldContainer.className = "bg-red-50 border-2 border-dashed border-red-300 rounded-lg p-2.5 flex flex-col items-center justify-center cursor-default select-none";
+                        shieldContainer.innerHTML = `<span class="text-red-600 font-black text-[10px] mb-1 tracking-widest"><i class="fa-solid fa-triangle-exclamation"></i> 衝突處理中</span><span class="text-red-400 text-xs font-bold">無法介入</span>`;
+                    } else {
+                        shieldContainer.className = "bg-slate-50 border-2 border-dashed border-slate-300 rounded-lg p-2.5 flex flex-col items-center justify-center cursor-default select-none";
+                        shieldContainer.innerHTML = `<span class="text-slate-400 font-bold text-[10px] mb-1 tracking-widest">區域狀態</span><span class="text-green-600 text-xs font-black"><i class="fa-solid fa-check-circle mr-1"></i>可進行搜查</span>`;
+                    }
+                }
+
+                let totalMs = poi.accumulatedTime || 0;
+                if (!poi.isBattling && poi.owner !== '未佔領' && poi.lastStartTime > 0) {
+                    totalMs += (now - poi.lastStartTime);
+                }
+                
+                const occTimer = document.getElementById(`occ-timer-${idx}`);
+                if (occTimer && !poi.isBattling) {
+                    if(poi.owner !== '未佔領') {
+                        const h = Math.floor(totalMs / 3600000).toString().padStart(2, '0');
+                        const m = Math.floor((totalMs % 3600000) / 60000).toString().padStart(2, '0');
+                        const s = Math.floor((totalMs % 60000) / 1000).toString().padStart(2, '0');
+                        occTimer.innerText = `${h}:${m}:${s}`;
+                        occTimer.className = "timer-font text-slate-700 text-sm md:text-base font-bold";
+                    } else {
+                        occTimer.innerText = `--:--:--`;
+                        occTimer.className = "timer-font text-slate-300 text-sm md:text-base font-bold";
+                    }
+                }
+
+                const battleTimer = document.getElementById(`battle-timer-${idx}`);
+                if (battleTimer && poi.isBattling && poi.battleStartTime > 0) {
+                    const diff = now - poi.battleStartTime;
+                    const m = Math.floor(diff / 60000).toString().padStart(2, '0');
+                    const s = Math.floor((diff % 60000) / 1000).toString().padStart(2, '0');
+                    battleTimer.innerText = `${m}:${s}`;
+                }
+            });
+        }
+
+        // --- STREAMING_CHUNK: Game Logic (Scoring & Battles) ---
+        function calculateScore(ms, income) {
+            const mins = ms / 60000;
+            return Math.floor(mins / 10) * income; 
+        }
+
+        window.toggleBattle = async (idx) => {
+            if(!currentState) return;
+            const newPois = JSON.parse(JSON.stringify(currentState.pois));
+            const poi = newPois[idx];
+            const now = Date.now();
+
+            if (!poi.isBattling) {
+                if (poi.protectedUntil > now) {
+                    showModal('<i class="fa-solid fa-shield-halved text-blue-500"></i> 封鎖中', '此區域目前由警方封鎖保護中，無法進行攻防！');
+                    return;
+                }
+                if (poi.owner !== '未佔領' && poi.lastStartTime > 0) {
+                    poi.accumulatedTime += (now - poi.lastStartTime);
+                }
+                poi.lastStartTime = 0;
+                poi.isBattling = true;
+                poi.battleStartTime = now;
+                await updateDoc(gameRef, { pois: newPois });
+            } else {
+                const options = ["未佔領", "第 1 小隊", "第 2 小隊", "第 3 小隊", "第 4 小隊", "第 5 小隊", "第 6 小隊"]
+                    .map(opt => `<option value="${opt}" ${poi.owner === opt ? 'selected' : ''}>${opt} ${poi.owner === opt ? '(防守方)' : ''}</option>`).join('');
+                
+                const selectHtml = `<div class="mt-4 text-left"><label class="text-sm font-bold text-slate-600 mb-2 block"><i class="fa-solid fa-gavel text-slate-400"></i> 判定最終掌控小隊：</label><select id="winner-select-${idx}" class="w-full bg-slate-50 border-2 border-slate-300 rounded-lg px-3 py-2 text-slate-800 outline-none focus:border-[#1e3a8a] text-base cursor-pointer font-bold shadow-sm">${options}</select></div>`;
+                
+                const isConfirmed = await showModal('<i class="fa-solid fa-scale-balanced text-slate-700"></i> 衝突結算', `【${poi.name}】衝突已結束，請進行結算！<br>${selectHtml}`, false, true);
+                
+                if (isConfirmed) {
+                    const newOwner = document.getElementById(`winner-select-${idx}`).value;
+                    
+                    if (newOwner === poi.owner) {
+                        poi.isBattling = false;
+                        poi.battleStartTime = 0;
+                        if(poi.owner !== '未佔領') poi.lastStartTime = now;
+                        await updateDoc(gameRef, { pois: newPois });
+                        showModal('<i class="fa-solid fa-shield-check text-green-500"></i> 防守成功', `【${poi.name}】由原小隊守住，搜查時間繼續累積！`);
+                    } else {
+                        let newTeams = JSON.parse(JSON.stringify(currentState.teams));
+                        if (poi.owner !== '未佔領') {
+                            const earned = calculateScore(poi.accumulatedTime, poi.income);
+                            if(earned > 0) {
+                                const tIdx = newTeams.findIndex(t => t.name === poi.owner);
+                                if(tIdx > -1) newTeams[tIdx].wealth += earned;
+                            }
+                        }
+                        
+                        poi.owner = newOwner;
+                        poi.accumulatedTime = 0;
+                        poi.lastStartTime = newOwner === '未佔領' ? 0 : now;
+                        poi.isBattling = false;
+                        poi.battleStartTime = 0;
+                        poi.protectedUntil = 0; 
+                        
+                        await updateDoc(gameRef, { pois: newPois, teams: newTeams });
+                        showModal('<i class="fa-solid fa-check-circle text-green-500"></i> 權限轉移完成', `該區域已移交給【${newOwner}】，前任小隊資金已結算入帳！`);
+                    }
+                }
+            }
+        };
+
+        window.confirmManualChange = async (idx) => {
+            if(!currentState) return;
+            const selectElem = document.getElementById(`admin-select-${idx}`);
+            const newOwner = selectElem.value;
+            const poi = currentState.pois[idx];
+            const now = Date.now();
+
+            if (newOwner === poi.owner) return;
+
+            const isConfirmed = await showModal('<i class="fa-solid fa-bolt text-yellow-500"></i> 強制變更與結算', `確定要將區域控制權強制轉移給【${newOwner}】並結算原小隊嗎？`, false, true);
+            if (isConfirmed) {
+                const newPois = JSON.parse(JSON.stringify(currentState.pois));
+                let newTeams = JSON.parse(JSON.stringify(currentState.teams));
+                const activePoi = newPois[idx];
+
+                if (activePoi.owner !== '未佔領' && activePoi.lastStartTime > 0) {
+                    activePoi.accumulatedTime += (now - activePoi.lastStartTime);
+                    const earned = calculateScore(activePoi.accumulatedTime, activePoi.income);
+                    if(earned > 0) {
+                        const tIdx = newTeams.findIndex(t => t.name === activePoi.owner);
+                        if(tIdx > -1) newTeams[tIdx].wealth += earned;
+                    }
+                }
+
+                activePoi.owner = newOwner;
+                activePoi.accumulatedTime = 0;
+                activePoi.lastStartTime = newOwner === '未佔領' ? 0 : now;
+                activePoi.protectedUntil = 0;
+
+                await updateDoc(gameRef, { pois: newPois, teams: newTeams });
+                showModal('<i class="fa-solid fa-check text-green-500"></i> 變更成功', `手動結算與移交完畢！`);
+            } else {
+                selectElem.value = poi.owner; 
+            }
+        };
+
+        // --- STREAMING_CHUNK: Admin Tools ---
+        window.renamePoi = async (idx) => {
+            if(!currentState) return;
+            const poi = currentState.pois[idx];
+            const newName = await showModal(
+                '<i class="fa-solid fa-pen text-blue-500"></i> 變更據點名稱', 
+                `請為【${poi.name}】輸入新的據點名稱：`, 
+                true, 
+                false, 
+                'text'
+            );
+            if (newName && newName.trim() !== '' && newName.trim() !== poi.name) {
+                const newPois = JSON.parse(JSON.stringify(currentState.pois));
+                newPois[idx].name = newName.trim();
+                await updateDoc(gameRef, { pois: newPois });
+            }
+        };
+
+        window.toggleHide = async (idx) => {
+            if(!currentState) return;
+            const newPois = [...currentState.pois];
+            newPois[idx].isHidden = !newPois[idx].isHidden;
+            await updateDoc(gameRef, { pois: newPois });
+        };
+
+        window.setShield = async (idx, mins) => {
+            if(!currentState) return;
+            const newPois = [...currentState.pois];
+            if (newPois[idx].isBattling && mins > 0) {
+                showModal('<i class="fa-solid fa-ban text-red-500"></i> 拒絕執行', '衝突處理中，無法拉起封鎖線！');
+                return;
+            }
+            newPois[idx].protectedUntil = mins > 0 ? Date.now() + (mins * 60000) : 0;
+            await updateDoc(gameRef, { pois: newPois });
+        };
+
+        window.resetGame = async () => {
+            if (adminRole !== 'super') return;
+            const pwd = await showModal('<i class="fa-solid fa-triangle-exclamation text-red-600"></i> 重置警告', '確定要銷毀所有卷宗並歸零狀態嗎？此動作無法復原！<br>請輸入最高權限密碼：', true);
+            if(pwd === '1150920') { 
+                await setDoc(gameRef, defaultState);
+                showModal('<i class="fa-solid fa-check text-green-500"></i> 系統已重置', '全案已清空，恢復為初始狀態。');
+            } else if (pwd !== null) {
+                showModal('<i class="fa-solid fa-xmark text-red-500"></i> 密碼錯誤', '權限驗證失敗，拒絕執行。');
+            }
+        };
+
+        window.pushAlert = async () => {
+            if (adminRole !== 'super') return;
+            const input = document.getElementById('admin-alert-input');
+            if(input.value.trim()) await updateDoc(gameRef, { alertMsg: input.value.trim() });
+            input.value = '';
+        };
+        window.clearAlert = async () => { 
+            if (adminRole !== 'super') return;
+            await updateDoc(gameRef, { alertMsg: "" }); 
+        };
+
+        // --- STREAMING_CHUNK: Auth & UI Interactions ---
+        window.setMobileTab = (tab) => {
+            const adminSec = document.getElementById('admin-section');
+            const statusSec = document.getElementById('status-section');
+            const tabStatusBtn = document.getElementById('tab-status-btn');
+            const tabAdminBtn = document.getElementById('tab-admin-btn');
+            
+            const activeCls = ['bg-[#1e3a8a]', 'text-white', 'border-[#1e3a8a]'];
+            const inactiveCls = ['bg-white', 'text-slate-600', 'border-slate-300'];
+
+            if (tab === 'admin') {
+                statusSec.classList.add('max-xl:hidden');
+                adminSec.classList.remove('max-xl:hidden');
+                tabAdminBtn.classList.remove(...inactiveCls); tabAdminBtn.classList.add(...activeCls);
+                tabStatusBtn.classList.remove(...activeCls); tabStatusBtn.classList.add(...inactiveCls);
+            } else {
+                adminSec.classList.add('max-xl:hidden');
+                statusSec.classList.remove('max-xl:hidden');
+                tabStatusBtn.classList.remove(...inactiveCls); tabStatusBtn.classList.add(...activeCls);
+                tabAdminBtn.classList.remove(...activeCls); tabAdminBtn.classList.add(...inactiveCls);
+            }
+        };
+
+        document.getElementById('admin-login-btn').onclick = async () => {
+            const pwd = await showModal('<i class="fa-solid fa-id-card-clip text-slate-700"></i> 搜查官身分驗證', '請出示您的專屬授權碼以存取警視廳終端：', true);
+            
+            if (rolePasswords[pwd]) {
+                adminRole = rolePasswords[pwd];
+                document.getElementById('admin-section').classList.remove('hidden');
+                document.getElementById('status-section').classList.replace('xl:col-span-12', 'xl:col-span-7'); 
+                document.getElementById('admin-login-btn').classList.add('hidden');
+                document.getElementById('admin-logout-btn').classList.remove('hidden');
+                document.getElementById('admin-logout-btn').classList.add('flex');
+                document.getElementById('mobile-tab-bar').classList.remove('hidden');
+                window.setMobileTab('status');
+                
+                let roleName = adminRole === 'super' ? '警視總監' : `現場搜查官 (${currentState.pois.find(p=>p.id === adminRole).name})`;
+                showModal('<i class="fa-solid fa-check-circle text-green-500"></i> 驗證通過', `歡迎登入，${roleName}。`);
+                
+                if (currentState) renderUI();
+            } else if (pwd !== null) {
+                showModal('<i class="fa-solid fa-circle-xmark text-red-500"></i> 存取被拒', '查無此授權碼。');
+            }
+        };
+
+        document.getElementById('admin-logout-btn').onclick = () => {
+            adminRole = null;
+            document.getElementById('admin-section').classList.add('hidden');
+            document.getElementById('admin-section').classList.remove('max-xl:hidden');
+            document.getElementById('status-section').classList.remove('max-xl:hidden');
+            document.getElementById('status-section').classList.replace('xl:col-span-7', 'xl:col-span-12');
+            document.getElementById('admin-login-btn').classList.remove('hidden');
+            document.getElementById('admin-logout-btn').classList.add('hidden');
+            document.getElementById('admin-logout-btn').classList.remove('flex');
+            document.getElementById('mobile-tab-bar').classList.add('hidden');
+            if (currentState) renderUI();
+        };
+
+        document.getElementById('map-upload').addEventListener('change', async function(e) {
+            if (adminRole !== 'super') return;
+            const file = e.target.files[0];
+            if (!file) return;
+            document.getElementById('map-file-name').innerText = file.name;
+            const reader = new FileReader();
+            reader.onload = async (event) => await updateDoc(gameRef, { mapUrl: event.target.result });
+            reader.readAsDataURL(file);
+        });
+
+        // 鎖定重置按鈕長按邏輯
+        (() => {
+            const btn = document.getElementById('reset-game-btn');
+            const progress = document.getElementById('reset-progress');
+            let holdTimer = null;
+
+            const startHold = (e) => {
+                if(e.button !== undefined && e.button !== 0) return; // Only left click
+                progress.style.transition = 'width 2s linear';
+                progress.style.width = '100%';
+                holdTimer = setTimeout(() => { window.resetGame(); cancelHold(); }, 2000);
+            };
+            const cancelHold = () => {
+                clearTimeout(holdTimer);
+                progress.style.transition = 'width 0.15s ease-out';
+                progress.style.width = '0%';
+            };
+
+            btn.addEventListener('mousedown', startHold);
+            btn.addEventListener('touchstart', (e) => { e.preventDefault(); startHold(e); }, { passive: false });
+            ['mouseup', 'mouseleave', 'touchend', 'touchcancel'].forEach(evt => btn.addEventListener(evt, cancelHold));
+        })();
+
+    </script>
+</body>
+</html>
