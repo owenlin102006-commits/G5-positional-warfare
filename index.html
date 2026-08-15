@@ -65,6 +65,21 @@
         @keyframes ping-slow { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.6); } }
         .animate-ping-slow { animation: ping-slow 1.4s ease-in-out infinite; }
         
+        /* 載入中動畫效果 */
+        @keyframes spin-slow { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .animate-spin-slow { animation: spin-slow 4s linear infinite; }
+        
+        @keyframes dots-jump {
+            0% { content: "."; }
+            33% { content: ".."; }
+            66% { content: "..."; }
+            100% { content: "."; }
+        }
+        .loading-dots::after {
+            content: ".";
+            animation: dots-jump 1.2s infinite steps(1);
+        }
+
         /* 檔案夾標籤效果 */
         .folder-tab {
             clip-path: polygon(0 0, 85% 0, 100% 100%, 0% 100%);
@@ -86,6 +101,18 @@
             <div class="flex justify-end gap-3">
                 <button id="modal-cancel" class="hidden px-5 py-2.5 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm font-bold transition btn-shadow w-full sm:w-auto">取消</button>
                 <button id="modal-ok" class="px-5 py-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-bold transition btn-shadow w-full sm:w-auto">確認執行</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 據點詳細資訊彈出 Modal (點擊放大) -->
+    <div id="poi-detail-modal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-50 hidden flex items-center justify-center opacity-0 transition-opacity duration-300 p-4">
+        <div class="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto card-shadow transform transition-transform scale-95 flex flex-col relative" id="poi-detail-content">
+            <button onclick="window.closePoiDetail()" class="absolute top-4 right-4 w-9 h-9 bg-slate-100 hover:bg-red-100 text-slate-600 hover:text-red-600 rounded-full flex items-center justify-center transition border-2 border-slate-300 z-10 btn-shadow">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+            <div id="poi-detail-body" class="p-6">
+                <!-- 由 JS 動態填入據點完整詳情 -->
             </div>
         </div>
     </div>
@@ -233,10 +260,16 @@
             </div>
 
             <div id="poi-cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-2 gap-5 w-full pb-10">
-                <!-- 載入中動畫 -->
-                <div class="w-full xl:col-span-2 bg-white card-shadow rounded-xl p-12 flex flex-col items-center justify-center text-slate-500">
-                    <i class="fa-solid fa-magnifying-glass fa-spin fa-3x mb-4 text-slate-300"></i>
-                    <p class="text-sm font-bold tracking-widest text-slate-400">正在連線至警視廳資料庫...</p>
+                <!-- 載入中動畫 (使用提供的圖檔旋轉與動態點點) -->
+                <div class="w-full xl:col-span-2 bg-white card-shadow rounded-2xl p-10 md:p-14 flex flex-col items-center justify-center text-slate-700 my-4 border-2 border-blue-900">
+                    <div class="relative w-32 h-32 md:w-36 md:h-36 mb-6 flex items-center justify-center">
+                        <div class="absolute inset-0 rounded-full border-4 border-dashed border-blue-800 animate-spin-slow"></div>
+                        <img src="IMG_1716.jpg" onerror="this.onerror=null; this.src='https://placehold.co/200x200/1e3a8a/ffffff?text=115+宿營'" alt="連線中" class="w-24 h-24 md:w-28 md:h-28 rounded-full object-cover shadow-lg border-2 border-slate-200 animate-spin-slow">
+                    </div>
+                    <div class="text-lg md:text-2xl font-black text-[#1e3a8a] tracking-wider flex items-center gap-1">
+                        <i class="fa-solid fa-database text-red-600 mr-2"></i>連線中<span class="loading-dots font-mono text-xl md:text-3xl text-red-600 inline-block w-8"></span>
+                    </div>
+                    <p class="text-xs md:text-sm text-slate-500 font-bold mt-2 tracking-widest">CMU DBMI x CSMU MI 115 新生宿營戰術連線</p>
                 </div>
             </div>
         </div>
@@ -246,6 +279,41 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, doc, onSnapshot, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // 觸覺回饋（震動）輔助函式
+        function triggerHaptic(type = 'light') {
+            if ('vibrate' in navigator) {
+                try {
+                    if (type === 'light') navigator.vibrate(15);
+                    else if (type === 'medium') navigator.vibrate(35);
+                    else if (type === 'heavy') navigator.vibrate([40, 30, 40]);
+                } catch(e) {}
+            }
+        }
+
+        // 據點小遊戲簡介資料 (供放大檢視 Modal 使用)
+        const poiGameInfo = {
+            "S1": {
+                type: "終極密碼 / 斯巴達盲劍客 / 人體電路板",
+                desc: "地圖正中央，四戰之地！適合大部隊火拼搶攻。玩法含終極密碼、戴眼罩聽聲辨位棒打對手，或巧拼扭扭樂考驗隊伍平衡性。"
+            },
+            "A1": {
+                type: "搶水瓶 / 金曲猜猜樂 / 死亡數字1-13",
+                desc: "恐龍出沒與親水交界危險地帶！考驗反應速度與心機喊牌。包含聽喊指令搶寶特瓶、聽音樂前奏搶答，以及撲克牌1-13喊牌爆血淘汰戰。"
+            },
+            "A2": {
+                type: "搶水瓶 / 金曲猜猜樂 / 死亡數字1-13",
+                desc: "親水防禦要塞！考驗隊員爆發力與反應。包含搶寶特瓶反應對決、前奏搶歌名，以及撲克牌死亡數字淘汰遊戲。"
+            },
+            "B1": {
+                type: "泰山鬥雞 / 快問快答 / 沸騰溫泉蛙跳",
+                desc: "體能訓練與生活後勤區，歡樂對決極度消耗體力！包含單腿鬥雞撞擊對決、腦筋急轉彎快問快答，以及夾水瓶折返蛙跳。"
+            },
+            "B2": {
+                type: "泰山鬥雞 / 快問快答 / 沸騰溫泉蛙跳",
+                desc: "森林邊界陣地！包含大腿夾水瓶折返跳、單腳鬥雞防禦戰，以及腦力考驗快問快答戰。"
+            }
+        };
 
         // 串接 Firebase 後端設定
         const firebaseConfig = {
@@ -307,6 +375,7 @@
 
         // --- STREAMING_CHUNK: Modal Logic ---
         function showModal(title, message, isPrompt = false, isConfirm = false, inputType = 'password') {
+            triggerHaptic('medium');
             return new Promise((resolve) => {
                 const modal = document.getElementById('custom-modal');
                 const content = document.getElementById('custom-modal-content');
@@ -317,7 +386,6 @@
                 document.getElementById('modal-title').innerHTML = title;
                 document.getElementById('modal-message').innerHTML = message;
                 
-                // 動態調整輸入框類型（支援一般文字與密碼輸入）
                 input.type = inputType;
                 input.placeholder = inputType === 'text' ? '請輸入新內容...' : '輸入解密金鑰';
                 
@@ -333,11 +401,11 @@
                 setTimeout(() => { modal.classList.remove('opacity-0'); content.classList.remove('scale-95'); if(isPrompt) input.focus(); }, 10);
 
                 const closeModal = (val) => {
+                    triggerHaptic('light');
                     modal.classList.add('opacity-0'); content.classList.add('scale-95');
                     setTimeout(() => { modal.classList.add('hidden'); resolve(val); }, 300);
                 };
 
-                // 移除舊的 event listeners 避免重複綁定
                 okBtn.replaceWith(okBtn.cloneNode(true));
                 cancelBtn.replaceWith(cancelBtn.cloneNode(true));
                 input.replaceWith(input.cloneNode(true));
@@ -351,6 +419,70 @@
                 newInput.onkeydown = (e) => { if(e.key === 'Enter') newOkBtn.click(); };
             });
         }
+
+        // --- POI 放大詳細資訊 Modal ---
+        window.openPoiDetail = (idx) => {
+            triggerHaptic('medium');
+            if(!currentState || !currentState.pois[idx]) return;
+            const poi = currentState.pois[idx];
+            const info = poiGameInfo[poi.id] || { type: "標準據點攻防戰", desc: "佔領可獲得穩定被動資金。" };
+            let teamNum = 0;
+            if (poi.owner.includes("第")) teamNum = parseInt(poi.owner.match(/\d+/)[0]);
+
+            const body = document.getElementById('poi-detail-body');
+            body.innerHTML = `
+                <div class="flex items-center gap-2 mb-3">
+                    <span class="px-2.5 py-1 rounded text-xs font-black level-badge-${poi.level}">${poi.level} CLASS</span>
+                    <span class="text-xs font-mono text-slate-400">FILE ID: ${poi.id}</span>
+                </div>
+                <h2 class="text-2xl md:text-3xl font-black text-slate-800 mb-2">${poi.name}</h2>
+                
+                <div class="bg-slate-50 border-2 border-slate-200 rounded-xl p-4 mb-4 team-color-${teamNum} relative overflow-hidden">
+                    <div class="absolute inset-0 bg-current opacity-5"></div>
+                    <div class="text-xs font-bold text-slate-400 mb-1">當前佔領隊伍</div>
+                    <div class="text-xl md:text-2xl font-black text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-flag"></i> ${poi.owner}
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 mb-5">
+                    <div class="bg-slate-100 p-3 rounded-xl border border-slate-200 text-center">
+                        <div class="text-xs text-slate-500 font-bold mb-1">被動收益</div>
+                        <div class="text-xl font-black text-yellow-600 font-mono">$${poi.income}<span class="text-xs font-normal text-slate-400">/10m</span></div>
+                    </div>
+                    <div class="bg-slate-100 p-3 rounded-xl border border-slate-200 text-center">
+                        <div class="text-xs text-slate-500 font-bold mb-1">當前狀態</div>
+                        <div class="text-sm font-black ${poi.isBattling ? 'text-red-600 animate-pulse' : 'text-emerald-600'}">
+                            ${poi.isBattling ? '⚔️ 衝突爆發中' : (poi.protectedUntil > Date.now() ? '🛡️ 現場封鎖中' : '✅ 可挑戰')}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="border-t-2 border-dashed border-slate-200 pt-4 mb-2">
+                    <h4 class="text-sm font-black text-slate-700 mb-1 flex items-center gap-2">
+                        <i class="fa-solid fa-gamepad text-blue-700"></i> 關卡遊戲項目
+                    </h4>
+                    <p class="text-xs font-bold text-blue-900 bg-blue-50 p-2 rounded-lg border border-blue-200 mb-3">${info.type}</p>
+                    <h4 class="text-sm font-black text-slate-700 mb-1 flex items-center gap-2">
+                        <i class="fa-solid fa-circle-info text-slate-500"></i> 據點簡介與戰術提示
+                    </h4>
+                    <p class="text-xs text-slate-600 leading-relaxed bg-slate-50 p-3 rounded-lg border border-slate-200">${info.desc}</p>
+                </div>
+            `;
+
+            const modal = document.getElementById('poi-detail-modal');
+            const content = document.getElementById('poi-detail-content');
+            modal.classList.remove('hidden');
+            setTimeout(() => { modal.classList.remove('opacity-0'); content.classList.remove('scale-95'); }, 10);
+        };
+
+        window.closePoiDetail = () => {
+            triggerHaptic('light');
+            const modal = document.getElementById('poi-detail-modal');
+            const content = document.getElementById('poi-detail-content');
+            modal.classList.add('opacity-0'); content.classList.add('scale-95');
+            setTimeout(() => { modal.classList.add('hidden'); }, 300);
+        };
 
         // --- STREAMING_CHUNK: Core Rendering ---
         function renderUI() {
@@ -420,10 +552,10 @@
                 if (poi.owner.includes("第")) teamNum = parseInt(poi.owner.match(/\d+/)[0]);
 
                 return `
-                    <div id="poi-card-${idx}" class="bg-white card-shadow rounded-xl flex flex-col relative transition-all scroll-mt-24 ${poi.isBattling ? 'border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)]' : ''}">
+                    <div id="poi-card-${idx}" onclick="window.openPoiDetail(${idx})" class="bg-white card-shadow rounded-xl flex flex-col relative transition-all scroll-mt-24 cursor-pointer hover:border-blue-600 active:scale-[0.99] group ${poi.isBattling ? 'border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)]' : ''}">
                         
-                        <div class="absolute -top-[2px] -left-[2px] bg-slate-800 text-white text-[10px] font-bold px-3 py-1 folder-tab z-10 border-b border-r border-slate-700">
-                            FILE: ${poi.id}
+                        <div class="absolute -top-[2px] -left-[2px] bg-slate-800 text-white text-[10px] font-bold px-3 py-1 folder-tab z-10 border-b border-r border-slate-700 flex items-center gap-1">
+                            FILE: ${poi.id} <i class="fa-solid fa-up-right-and-down-left-from-center text-[9px] text-blue-300 ml-1 opacity-0 group-hover:opacity-100 transition"></i>
                         </div>
 
                         ${poi.isHidden ? '<div class="absolute -top-3 -right-3 bg-red-600 text-white text-[10px] px-2 py-1 rounded font-black z-20 shadow-md transform rotate-12 border-2 border-white"><i class="fa-solid fa-eye-slash"></i> 封存機密</div>' : ''}
@@ -431,7 +563,9 @@
                         <div class="${big ? 'p-5 md:p-6' : 'p-4'} flex-1">
                             <div class="flex justify-between items-start mb-4 mt-2">
                                 <div class="flex flex-col items-start gap-1">
-                                    <h3 class="${big ? 'text-xl md:text-2xl' : 'text-lg md:text-xl'} font-black text-slate-800 leading-tight">${poi.name}</h3>
+                                    <h3 class="${big ? 'text-xl md:text-2xl' : 'text-lg md:text-xl'} font-black text-slate-800 leading-tight group-hover:text-blue-700 transition flex items-center gap-2">
+                                        ${poi.name} <i class="fa-solid fa-magnifying-glass-plus text-xs text-slate-400 group-hover:text-blue-600"></i>
+                                    </h3>
                                     <span class="px-2 py-0.5 rounded text-[10px] font-black level-badge-${poi.level} tracking-widest">${poi.level} CLASS</span>
                                 </div>
                                 <div class="text-right bg-slate-50 border border-slate-200 rounded-lg px-2 py-1">
@@ -796,6 +930,7 @@
 
         // --- STREAMING_CHUNK: Auth & UI Interactions ---
         window.setMobileTab = (tab) => {
+            triggerHaptic('light');
             const adminSec = document.getElementById('admin-section');
             const statusSec = document.getElementById('status-section');
             const tabStatusBtn = document.getElementById('tab-status-btn');
@@ -818,6 +953,7 @@
         };
 
         document.getElementById('admin-login-btn').onclick = async () => {
+            triggerHaptic('medium');
             const pwd = await showModal('<i class="fa-solid fa-id-card-clip text-slate-700"></i> 搜查官身分驗證', '請出示您的專屬授權碼以存取警視廳終端：', true);
             
             if (rolePasswords[pwd]) {
@@ -840,6 +976,7 @@
         };
 
         document.getElementById('admin-logout-btn').onclick = () => {
+            triggerHaptic('light');
             adminRole = null;
             document.getElementById('admin-section').classList.add('hidden');
             document.getElementById('admin-section').classList.remove('max-xl:hidden');
