@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🌐 東勢林場終端據點戰情室 | 據點攻防戰</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 🎵 Tone.js 音效套件 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -61,7 +65,6 @@
         ::-webkit-scrollbar-track { background: #e2e8f0; }
         ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
         
-        @keyframes scanline { 0% { transform: translateY(-100%); } 100% { transform: translateY(100%); } }
         @keyframes ping-slow { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.6); } }
         .animate-ping-slow { animation: ping-slow 1.4s ease-in-out infinite; }
         
@@ -178,7 +181,6 @@
                 <i class="fa-solid fa-chart-line text-blue-700"></i>
                 <h2 class="font-black text-base md:text-lg text-slate-800 tracking-wide">小隊搜查資金即時榜</h2>
             </div>
-            <!-- 修正手機版版面與排版，加入 pt-6 避免標籤被切掉 -->
             <div id="global-leaderboard" class="flex overflow-x-auto gap-3 md:gap-4 w-full pt-6 pb-4 snap-x snap-mandatory px-2">
                 <!-- 由 JS 動態生成 -->
             </div>
@@ -261,12 +263,12 @@
 
             <div id="poi-cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-2 gap-5 w-full pb-10">
                 <!-- 載入中動畫 (使用提供的圖檔旋轉與動態點點) -->
-                <div class="w-full xl:col-span-2 bg-white card-shadow rounded-2xl p-10 md:p-14 flex flex-col items-center justify-center text-slate-700 my-4 border-2 border-blue-900">
+                <div class="w-full xl:col-span-2 bg-white card-shadow rounded-2xl p-10 md:p-14 flex flex-col items-center justify-center text-slate-700 my-4 border-2 border-blue-900" id="loading-spinner">
                     <div class="relative w-32 h-32 md:w-36 md:h-36 mb-6 flex items-center justify-center">
                         <div class="absolute inset-0 rounded-full border-4 border-dashed border-blue-800 animate-spin-slow"></div>
-                        <img src="IMG_1716.jpg" onerror="this.onerror=null; this.src='https://placehold.co/200x200/1e3a8a/ffffff?text=115+宿營'" alt="連線中" class="w-24 h-24 md:w-28 md:h-28 rounded-full object-cover shadow-lg border-2 border-slate-200 animate-spin-slow">
+                        <img src="IMG_1716.jpg" onerror="this.onerror=null; this.src='https://placehold.co/200x200/1e3a8a/ffffff?text=連線中'" alt="連線中" class="w-24 h-24 md:w-28 md:h-28 rounded-full object-cover shadow-lg border-2 border-slate-200 animate-spin-slow">
                     </div>
-                    <div class="text-lg md:text-2xl font-black text-[#1e3a8a] tracking-wider flex items-center gap-1">
+                    <div class="text-lg md:text-2xl font-black text-[#1e3a8a] tracking-wider flex items-center gap-1" id="loading-text">
                         <i class="fa-solid fa-database text-red-600 mr-2"></i>連線中<span class="loading-dots font-mono text-xl md:text-3xl text-red-600 inline-block w-8"></span>
                     </div>
                     <p class="text-xs md:text-sm text-slate-500 font-bold mt-2 tracking-widest">CMU DBMI x CSMU MI 115 新生宿營戰術連線</p>
@@ -276,11 +278,12 @@
 
     </main>
 
+    <!-- 🟡 STREAMING_CHUNK: JavaScript logic begins -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, doc, onSnapshot, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // 觸覺回饋（震動）輔助函式
+        // --- 觸覺回饋（震動）輔助函式 ---
         function triggerHaptic(type = 'light') {
             if ('vibrate' in navigator) {
                 try {
@@ -291,31 +294,44 @@
             }
         }
 
-        // 據點小遊戲簡介資料 (供放大檢視 Modal 使用)
-        const poiGameInfo = {
-            "S1": {
-                type: "終極密碼 / 斯巴達盲劍客 / 人體電路板",
-                desc: "地圖正中央，四戰之地！適合大部隊火拼搶攻。玩法含終極密碼、戴眼罩聽聲辨位棒打對手，或巧拼扭扭樂考驗隊伍平衡性。"
-            },
-            "A1": {
-                type: "搶水瓶 / 金曲猜猜樂 / 死亡數字1-13",
-                desc: "恐龍出沒與親水交界危險地帶！考驗反應速度與心機喊牌。包含聽喊指令搶寶特瓶、聽音樂前奏搶答，以及撲克牌1-13喊牌爆血淘汰戰。"
-            },
-            "A2": {
-                type: "搶水瓶 / 金曲猜猜樂 / 死亡數字1-13",
-                desc: "親水防禦要塞！考驗隊員爆發力與反應。包含搶寶特瓶反應對決、前奏搶歌名，以及撲克牌死亡數字淘汰遊戲。"
-            },
-            "B1": {
-                type: "泰山鬥雞 / 快問快答 / 沸騰溫泉蛙跳",
-                desc: "體能訓練與生活後勤區，歡樂對決極度消耗體力！包含單腿鬥雞撞擊對決、腦筋急轉彎快問快答，以及夾水瓶折返蛙跳。"
-            },
-            "B2": {
-                type: "泰山鬥雞 / 快問快答 / 沸騰溫泉蛙跳",
-                desc: "森林邊界陣地！包含大腿夾水瓶折返跳、單腳鬥雞防禦戰，以及腦力考驗快問快答戰。"
+        // --- 音效解鎖與播放邏輯 ---
+        document.body.addEventListener('click', async () => {
+            if (window.Tone && Tone.context.state !== 'running') {
+                await Tone.start();
             }
+        }, { once: true });
+
+        async function playAlertSound() {
+            try {
+                if (window.Tone) {
+                    await Tone.start();
+                    const synth = new Tone.Synth({
+                        oscillator: { type: "triangle" },
+                        envelope: { attack: 0.05, decay: 0.2, sustain: 0.2, release: 1.5 }
+                    }).toDestination();
+                    
+                    const now = Tone.now();
+                    // 登-登-登-登
+                    synth.triggerAttackRelease("C5", "8n", now);
+                    synth.triggerAttackRelease("E5", "8n", now + 0.15);
+                    synth.triggerAttackRelease("G5", "8n", now + 0.30);
+                    synth.triggerAttackRelease("C6", "4n", now + 0.45);
+                }
+                triggerHaptic('heavy');
+            } catch(e) { 
+                console.warn("音效播放被瀏覽器阻擋", e); 
+            }
+        }
+
+        // --- 據點資訊與設定 ---
+        const poiGameInfo = {
+            "S1": { type: "終極密碼解碼戰 / 斯巴達盲劍客 / 伺服器重啟(扭扭樂)", desc: "地圖正中央，四戰之地。適合大部隊火拼！" },
+            "A1": { type: "搶水瓶 / 金曲猜猜樂 / 死亡數字1-13", desc: "恐龍出沒與親水交界的危險地帶，考驗反應、爆發力與心機！" },
+            "A2": { type: "搶水瓶 / 金曲猜猜樂 / 死亡數字1-13", desc: "恐龍出沒與親水交界的危險地帶，考驗反應、爆發力與心機！" },
+            "B1": { type: "泰山鬥雞防衛戰 / 快問快答 / 沸騰溫泉蛙跳", desc: "體能訓練與生活後勤區，偏向歡樂對決，極度消耗體力！" },
+            "B2": { type: "泰山鬥雞防衛戰 / 快問快答 / 沸騰溫泉蛙跳", desc: "體能訓練與生活後勤區，偏向歡樂對決，極度消耗體力！" }
         };
 
-        // 串接 Firebase 後端設定
         const firebaseConfig = {
             apiKey: "AIzaSyAxxCVI23NFoH_VzpMg-HU8uzJqolgTPbo",
             authDomain: "g5-positional-warfare.firebaseapp.com",
@@ -328,20 +344,17 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         
-        // 建立專屬的柯南版資料節點
-        const gameRef = doc(db, 'rpg_game', 'g5_1_conan_state_v1'); 
+        // 使用 v2 節點
+        const gameRef = doc(db, 'rpg_game', 'g5_1_conan_state_v2'); 
 
         let adminRole = null; 
         let currentState = null;
         let timerInterval = null;
+        let lastAlertMsg = null;
 
         const rolePasswords = {
-            '1150920': 'super', // 總部密碼
-            '7701': 'S1',       // 侏儸紀公園
-            '7702': 'A1',       // 櫻花亭
-            '7703': 'A2',       // 得福亭
-            '7704': 'B1',       // 白鴿廣場
-            '7705': 'B2'        // 森林廣場
+            '1150920': 'super',
+            '7701': 'S1', '7702': 'A1', '7703': 'A2', '7704': 'B1', '7705': 'B2'
         };
 
         const defaultState = {
@@ -352,7 +365,7 @@
                 { name: "第 5 小隊", wealth: 0 }, { name: "第 6 小隊", wealth: 0 }
             ],
             pois: [
-                { id: "S1", name: "侏儸紀公園", level: "S", owner: "未佔領", income: 120, isHidden: false, isBattling: false, battleStartTime: 0, accumulatedTime: 0, lastStartTime: 0, protectedUntil: 0 },
+                { id: "S1", name: "侏羅紀公園", level: "S", owner: "未佔領", income: 120, isHidden: false, isBattling: false, battleStartTime: 0, accumulatedTime: 0, lastStartTime: 0, protectedUntil: 0 },
                 { id: "A1", name: "櫻花亭", level: "A", owner: "未佔領", income: 90, isHidden: false, isBattling: false, battleStartTime: 0, accumulatedTime: 0, lastStartTime: 0, protectedUntil: 0 },
                 { id: "A2", name: "得福亭", level: "A", owner: "未佔領", income: 90, isHidden: false, isBattling: false, battleStartTime: 0, accumulatedTime: 0, lastStartTime: 0, protectedUntil: 0 },
                 { id: "B1", name: "白鴿廣場", level: "B", owner: "未佔領", income: 60, isHidden: false, isBattling: false, battleStartTime: 0, accumulatedTime: 0, lastStartTime: 0, protectedUntil: 0 },
@@ -360,20 +373,31 @@
             ]
         };
 
-        // Firebase 監聽器
+        // --- 🟡 STREAMING_CHUNK: Firebase Connection ---
+        // 加上錯誤偵測，如果連線失敗或權限不對，會顯示在畫面上
         onSnapshot(gameRef, (snap) => {
-            if (!snap.exists()) { setDoc(gameRef, defaultState); return; }
+            if (!snap.exists()) { 
+                setDoc(gameRef, defaultState).catch(err => {
+                    console.error("寫入初始化資料失敗:", err);
+                    document.getElementById('loading-text').innerHTML = `<i class="fa-solid fa-triangle-exclamation text-red-600 mr-2"></i>資料庫寫入被拒 (請檢查 Firebase 權限)`;
+                });
+                return; 
+            }
             const data = snap.data();
-            // 防呆機制：若抓到舊資料(不是5個據點)，強制初始化
+            
             if (!data.pois || data.pois.length !== 5) {
                 setDoc(gameRef, defaultState);
                 return;
             }
             currentState = data;
             renderUI();
+        }, (error) => {
+            console.error("Firebase 連線錯誤:", error);
+            document.getElementById('loading-text').innerHTML = `<i class="fa-solid fa-triangle-exclamation text-red-600 mr-2"></i>連線失敗 (請檢查 Firebase 權限與網路)`;
         });
 
-        // --- STREAMING_CHUNK: Modal Logic ---
+
+        // --- UI Modal ---
         function showModal(title, message, isPrompt = false, isConfirm = false, inputType = 'password') {
             triggerHaptic('medium');
             return new Promise((resolve) => {
@@ -387,7 +411,7 @@
                 document.getElementById('modal-message').innerHTML = message;
                 
                 input.type = inputType;
-                input.placeholder = inputType === 'text' ? '請輸入新內容...' : '輸入解密金鑰';
+                input.placeholder = inputType === 'text' ? '請輸入新內容...' : '請輸入密碼';
                 
                 if (isPrompt) { 
                     input.classList.remove('hidden'); cancelBtn.classList.remove('hidden'); input.value = ''; 
@@ -406,6 +430,7 @@
                     setTimeout(() => { modal.classList.add('hidden'); resolve(val); }, 300);
                 };
 
+                // 清除舊的事件監聽器避免重複觸發
                 okBtn.replaceWith(okBtn.cloneNode(true));
                 cancelBtn.replaceWith(cancelBtn.cloneNode(true));
                 input.replaceWith(input.cloneNode(true));
@@ -484,17 +509,25 @@
             setTimeout(() => { modal.classList.add('hidden'); }, 300);
         };
 
-        // --- STREAMING_CHUNK: Core Rendering ---
+
+        // --- 🟡 STREAMING_CHUNK: Core Rendering ---
         function renderUI() {
             if (!currentState) return;
             
-            // 1. 公告與地圖
+            // 處理公告與音效
             const banner = document.getElementById('announcement-banner');
             if (currentState.alertMsg) {
                 document.getElementById('announcement-text').innerText = currentState.alertMsg;
                 banner.classList.remove('hidden');
-            } else { banner.classList.add('hidden'); }
-            
+                if (lastAlertMsg !== null && currentState.alertMsg !== lastAlertMsg) {
+                    playAlertSound();
+                }
+            } else { 
+                banner.classList.add('hidden'); 
+            }
+            lastAlertMsg = currentState.alertMsg;
+
+            // 地圖顯示
             if (currentState.mapUrl) {
                 document.getElementById('map-image').src = currentState.mapUrl;
                 document.getElementById('map-display-container').classList.remove('hidden');
@@ -502,13 +535,10 @@
                 document.getElementById('map-display-container').classList.add('hidden');
             }
 
-            // 2. 財富記分板
+            // 排行榜顯示
             const leaderboardSection = document.getElementById('leaderboard-section');
-            if (adminRole) {
-                leaderboardSection.classList.remove('hidden');
-            } else {
-                leaderboardSection.classList.add('hidden');
-            }
+            if (adminRole) leaderboardSection.classList.remove('hidden');
+            else leaderboardSection.classList.add('hidden');
 
             const teamIncomes = {};
             currentState.teams.forEach(t => teamIncomes[t.name] = 0);
@@ -536,7 +566,7 @@
                 </div>
             `}).join('');
 
-            // 3. 據點卡片渲染
+            // 據點卡片渲染
             const cardsContainer = document.getElementById('poi-cards-container');
             const levelGroups = { S: [], A: [], B: [] };
             const battlingPois = [];
@@ -635,7 +665,7 @@
             });
             cardsContainer.innerHTML = cardsHTML;
 
-            // 🥊 戰況速覽浮動列
+            // 戰況速覽浮動列
             const ticker = document.getElementById('battle-ticker');
             const tickerList = document.getElementById('battle-ticker-list');
             if (battlingPois.length > 0) {
@@ -650,7 +680,7 @@
                 tickerList.innerHTML = '';
             }
 
-            // 4. STREAMING_CHUNK: Admin Dashboard Rendering
+            // Admin Dashboard Rendering
             if (adminRole) {
                 const globalTools = document.getElementById('admin-global-tools');
                 const dangerZone = document.getElementById('admin-danger-zone');
@@ -677,7 +707,6 @@
 
                     return `
                     <div class="bg-white border-2 border-slate-200 p-4 rounded-xl flex flex-col gap-3 relative btn-shadow ${poi.isBattling ? 'border-red-400 ring-2 ring-red-100' : ''}">
-                        
                         <div class="flex justify-between items-center border-b-2 border-slate-100 pb-2">
                             <span class="text-slate-800 font-black text-sm flex items-center gap-2">
                                 <i class="fa-solid fa-folder-open text-slate-400"></i> ${poi.name} 
@@ -714,7 +743,7 @@
             updateDynamicData(); 
         }
 
-        // --- STREAMING_CHUNK: Timers Logic ---
+        // --- 🟡 STREAMING_CHUNK: Timers Logic ---
         function updateDynamicData() {
             if (!currentState) return;
             const now = Date.now();
@@ -769,7 +798,7 @@
             });
         }
 
-        // --- STREAMING_CHUNK: Game Logic (Scoring & Battles) ---
+        // --- 🟡 STREAMING_CHUNK: Game Logic (Scoring & Battles) ---
         function calculateScore(ms, income) {
             const mins = ms / 60000;
             return Math.floor(mins / 10) * income; 
@@ -870,7 +899,7 @@
             }
         };
 
-        // --- STREAMING_CHUNK: Admin Tools ---
+        // --- 🟡 STREAMING_CHUNK: Admin Tools ---
         window.renamePoi = async (idx) => {
             if(!currentState) return;
             const poi = currentState.pois[idx];
@@ -908,7 +937,7 @@
 
         window.resetGame = async () => {
             if (adminRole !== 'super') return;
-            const pwd = await showModal('<i class="fa-solid fa-triangle-exclamation text-red-600"></i> 重置警告', '確定要銷毀所有卷宗並歸零狀態嗎？此動作無法復原！<br>請輸入最高權限密碼：', true);
+            const pwd = await showModal('<i class="fa-solid fa-triangle-exclamation text-red-600"></i> 重置警告', '確定要銷毀所有卷宗並歸零狀態嗎？此動作無法復原！<br>請輸入最高權限密碼：', true, false, 'password');
             if(pwd === '1150920') { 
                 await setDoc(gameRef, defaultState);
                 showModal('<i class="fa-solid fa-check text-green-500"></i> 系統已重置', '全案已清空，恢復為初始狀態。');
@@ -928,7 +957,7 @@
             await updateDoc(gameRef, { alertMsg: "" }); 
         };
 
-        // --- STREAMING_CHUNK: Auth & UI Interactions ---
+        // --- 🟡 STREAMING_CHUNK: Auth & UI Interactions ---
         window.setMobileTab = (tab) => {
             triggerHaptic('light');
             const adminSec = document.getElementById('admin-section');
@@ -1006,7 +1035,7 @@
             let holdTimer = null;
 
             const startHold = (e) => {
-                if(e.button !== undefined && e.button !== 0) return; // Only left click
+                if(e.button !== undefined && e.button !== 0) return; 
                 progress.style.transition = 'width 2s linear';
                 progress.style.width = '100%';
                 holdTimer = setTimeout(() => { window.resetGame(); cancelHold(); }, 2000);
@@ -1021,7 +1050,6 @@
             btn.addEventListener('touchstart', (e) => { e.preventDefault(); startHold(e); }, { passive: false });
             ['mouseup', 'mouseleave', 'touchend', 'touchcancel'].forEach(evt => btn.addEventListener(evt, cancelHold));
         })();
-
     </script>
 </body>
 </html>
