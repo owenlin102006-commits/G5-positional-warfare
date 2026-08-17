@@ -224,6 +224,14 @@
                     <!-- 由 JS 動態生成 -->
                 </div>
 
+                <!-- Sync Scores Tool (Super Admin Only) -->
+                <div id="admin-sync-tools" class="px-5 py-4 border-t-2 border-slate-200 bg-blue-50 hidden">
+                    <label class="text-xs font-bold text-blue-700 mb-2 block"><i class="fa-solid fa-paper-plane mr-1"></i> 分數結算與同步</label>
+                    <button onclick="window.sendScoresToCampingSystem()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-sm font-bold transition flex items-center justify-center gap-2 btn-shadow w-full">
+                        <i class="fa-solid fa-cloud-arrow-up animate-bounce"></i> 傳送戰況分數至宿營總計分系統
+                    </button>
+                </div>
+
                 <!-- Danger Zone (Super Admin Only) -->
                 <div id="admin-danger-zone" class="px-5 pb-5 pt-4 border-t-2 border-slate-200 bg-white mt-auto flex flex-col sm:flex-row justify-between items-center gap-3 hidden">
                     <div class="flex items-center gap-2 border-2 border-slate-300 bg-slate-50 rounded-lg p-1.5 max-w-[200px] w-full sm:w-auto">
@@ -326,8 +334,8 @@
         // --- 據點資訊與設定 ---
         const poiGameInfo = {
             "S1": { type: "終極密碼解碼戰 / 斯巴達盲劍客 / 伺服器重啟(扭扭樂)", desc: "地圖正中央，四戰之地。適合大部隊火拼！" },
-            "A1": { type: "搶水瓶 / 金曲猜猜樂 / 死亡數字1-13", desc: "恐龍出沒與親水交界的危險地帶，考驗反應、爆發力與心機！" },
-            "A2": { type: "搶水瓶 / 金曲猜猜樂 / 死亡數字1-13", desc: "恐龍出沒與親水交界的危險地帶，考驗反應、爆發力與心機！" },
+            "A1": { type: "搶水瓶 / 金曲猜猜樂 / 死亡數字1-13", desc: "在涼亭的遮蔽下，考驗反應、爆發力與心機！" },
+            "A2": { type: "搶水瓶 / 金曲猜猜樂 / 死亡數字1-13", desc: "在涼亭的遮蔽下，考驗反應、爆發力與心機！" },
             "B1": { type: "泰山鬥雞防衛戰 / 快問快答 / 沸騰溫泉蛙跳", desc: "體能訓練與生活後勤區，偏向歡樂對決，極度消耗體力！" },
             "B2": { type: "泰山鬥雞防衛戰 / 快問快答 / 沸騰溫泉蛙跳", desc: "體能訓練與生活後勤區，偏向歡樂對決，極度消耗體力！" }
         };
@@ -683,16 +691,19 @@
             // Admin Dashboard Rendering
             if (adminRole) {
                 const globalTools = document.getElementById('admin-global-tools');
+                const syncTools = document.getElementById('admin-sync-tools');
                 const dangerZone = document.getElementById('admin-danger-zone');
                 const roleTitle = document.getElementById('admin-role-title');
 
                 if (adminRole === 'super') {
                     globalTools.classList.remove('hidden');
+                    syncTools.classList.remove('hidden');
                     dangerZone.classList.remove('hidden');
                     dangerZone.classList.add('flex');
                     roleTitle.innerText = "警視廳指揮中心";
                 } else {
                     globalTools.classList.add('hidden');
+                    syncTools.classList.add('hidden');
                     dangerZone.classList.add('hidden');
                     dangerZone.classList.remove('flex');
                     const poiName = currentState.pois.find(p => p.id === adminRole).name;
@@ -956,6 +967,46 @@
             if (adminRole !== 'super') return;
             await updateDoc(gameRef, { alertMsg: "" }); 
         };
+
+        window.sendScoresToCampingSystem = async () => {
+            if (!currentState || !currentState.teams) return;
+
+            // 1. 打包 6 個小隊的分數資料
+            const scoreData = {};
+            const params = new URLSearchParams();
+
+            currentState.teams.forEach((t, i) => {
+                const teamKey = `team${i + 1}`;
+                scoreData[teamKey] = t.wealth;
+                params.append(teamKey, t.wealth);
+            });
+
+            // 2. 存入同網域共用的 LocalStorage
+            localStorage.setItem('g5_warfare_scores', JSON.stringify({
+                updatedAt: Date.now(),
+                teams: currentState.teams,
+                scoreMap: scoreData
+            }));
+
+            // 3. 組合目標網址
+            const targetBaseUrl = "https://owenlin102006-commits.github.io/Camping-Point-Calculation/";
+            const targetFullUrl = `${targetBaseUrl}?${params.toString()}`;
+
+            // 4. 彈窗確認並開啟
+            const confirm = await showModal(
+                '<i class="fa-solid fa-paper-plane text-blue-600"></i> 分數傳送確認',
+                `即將把以下戰果匯出至總計分板：<br><br>` +
+                currentState.teams.map(t => `<span class="inline-block bg-slate-100 rounded px-2 py-1 m-1 text-sm font-bold border border-slate-300 text-slate-700">${t.name}: <span class="text-yellow-600">$${t.wealth}</span></span>`).join('') +
+                `<br><br><span class="text-red-600 font-bold mt-2 inline-block">點擊「確認執行」將另開新視窗並自動帶入分數！</span>`,
+                false,
+                true
+            );
+
+            if (confirm) {
+                window.open(targetFullUrl, '_blank');
+            }
+        };
+
 
         // --- 🟡 STREAMING_CHUNK: Auth & UI Interactions ---
         window.setMobileTab = (tab) => {
