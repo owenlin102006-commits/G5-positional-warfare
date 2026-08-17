@@ -270,7 +270,7 @@
             </div>
 
             <div id="poi-cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-2 gap-5 w-full pb-10">
-                <!-- 載入中動畫 (使用提供的圖檔旋轉與動態點點) -->
+                <!-- 載入中動畫 -->
                 <div class="w-full xl:col-span-2 bg-white card-shadow rounded-2xl p-10 md:p-14 flex flex-col items-center justify-center text-slate-700 my-4 border-2 border-blue-900" id="loading-spinner">
                     <div class="relative w-32 h-32 md:w-36 md:h-36 mb-6 flex items-center justify-center">
                         <div class="absolute inset-0 rounded-full border-4 border-dashed border-blue-800 animate-spin-slow"></div>
@@ -286,7 +286,6 @@
 
     </main>
 
-    <!-- 🟡 STREAMING_CHUNK: JavaScript logic begins -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, doc, onSnapshot, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -365,6 +364,7 @@
             '7701': 'S1', '7702': 'A1', '7703': 'A2', '7704': 'B1', '7705': 'B2'
         };
 
+        // 🌟 據點分數已更新為 S:300, A:200, B:100
         const defaultState = {
             mapUrl: "", alertMsg: "",
             teams: [
@@ -373,16 +373,15 @@
                 { name: "第 5 小隊", wealth: 0 }, { name: "第 6 小隊", wealth: 0 }
             ],
             pois: [
-                { id: "S1", name: "侏羅紀公園", level: "S", owner: "未佔領", income: 120, isHidden: false, isBattling: false, battleStartTime: 0, accumulatedTime: 0, lastStartTime: 0, protectedUntil: 0 },
-                { id: "A1", name: "櫻花亭", level: "A", owner: "未佔領", income: 90, isHidden: false, isBattling: false, battleStartTime: 0, accumulatedTime: 0, lastStartTime: 0, protectedUntil: 0 },
-                { id: "A2", name: "得福亭", level: "A", owner: "未佔領", income: 90, isHidden: false, isBattling: false, battleStartTime: 0, accumulatedTime: 0, lastStartTime: 0, protectedUntil: 0 },
-                { id: "B1", name: "白鴿廣場", level: "B", owner: "未佔領", income: 60, isHidden: false, isBattling: false, battleStartTime: 0, accumulatedTime: 0, lastStartTime: 0, protectedUntil: 0 },
-                { id: "B2", name: "森林廣場", level: "B", owner: "未佔領", income: 60, isHidden: false, isBattling: false, battleStartTime: 0, accumulatedTime: 0, lastStartTime: 0, protectedUntil: 0 }
+                { id: "S1", name: "侏羅紀公園", level: "S", owner: "未佔領", income: 300, isHidden: false, isBattling: false, battleStartTime: 0, accumulatedTime: 0, lastStartTime: 0, protectedUntil: 0 },
+                { id: "A1", name: "櫻花亭", level: "A", owner: "未佔領", income: 200, isHidden: false, isBattling: false, battleStartTime: 0, accumulatedTime: 0, lastStartTime: 0, protectedUntil: 0 },
+                { id: "A2", name: "得福亭", level: "A", owner: "未佔領", income: 200, isHidden: false, isBattling: false, battleStartTime: 0, accumulatedTime: 0, lastStartTime: 0, protectedUntil: 0 },
+                { id: "B1", name: "白鴿廣場", level: "B", owner: "未佔領", income: 100, isHidden: false, isBattling: false, battleStartTime: 0, accumulatedTime: 0, lastStartTime: 0, protectedUntil: 0 },
+                { id: "B2", name: "森林廣場", level: "B", owner: "未佔領", income: 100, isHidden: false, isBattling: false, battleStartTime: 0, accumulatedTime: 0, lastStartTime: 0, protectedUntil: 0 }
             ]
         };
 
-        // --- 🟡 STREAMING_CHUNK: Firebase Connection ---
-        // 加上錯誤偵測，如果連線失敗或權限不對，會顯示在畫面上
+        // --- Firebase Connection ---
         onSnapshot(gameRef, (snap) => {
             if (!snap.exists()) { 
                 setDoc(gameRef, defaultState).catch(err => {
@@ -403,7 +402,6 @@
             console.error("Firebase 連線錯誤:", error);
             document.getElementById('loading-text').innerHTML = `<i class="fa-solid fa-triangle-exclamation text-red-600 mr-2"></i>連線失敗 (請檢查 Firebase 權限與網路)`;
         });
-
 
         // --- UI Modal ---
         function showModal(title, message, isPrompt = false, isConfirm = false, inputType = 'password') {
@@ -438,7 +436,6 @@
                     setTimeout(() => { modal.classList.add('hidden'); resolve(val); }, 300);
                 };
 
-                // 清除舊的事件監聽器避免重複觸發
                 okBtn.replaceWith(okBtn.cloneNode(true));
                 cancelBtn.replaceWith(cancelBtn.cloneNode(true));
                 input.replaceWith(input.cloneNode(true));
@@ -518,7 +515,7 @@
         };
 
 
-        // --- 🟡 STREAMING_CHUNK: Core Rendering ---
+        // --- Core Rendering ---
         function renderUI() {
             if (!currentState) return;
             
@@ -754,7 +751,7 @@
             updateDynamicData(); 
         }
 
-        // --- 🟡 STREAMING_CHUNK: Timers Logic ---
+        // --- Timers Logic ---
         function updateDynamicData() {
             if (!currentState) return;
             const now = Date.now();
@@ -809,7 +806,7 @@
             });
         }
 
-        // --- 🟡 STREAMING_CHUNK: Game Logic (Scoring & Battles) ---
+        // --- Game Logic (Scoring & Battles) ---
         function calculateScore(ms, income) {
             const mins = ms / 60000;
             return Math.floor(mins / 10) * income; 
@@ -910,7 +907,7 @@
             }
         };
 
-        // --- 🟡 STREAMING_CHUNK: Admin Tools ---
+        // --- Admin Tools ---
         window.renamePoi = async (idx) => {
             if(!currentState) return;
             const poi = currentState.pois[idx];
@@ -1008,7 +1005,7 @@
         };
 
 
-        // --- 🟡 STREAMING_CHUNK: Auth & UI Interactions ---
+        // --- Auth & UI Interactions ---
         window.setMobileTab = (tab) => {
             triggerHaptic('light');
             const adminSec = document.getElementById('admin-section');
