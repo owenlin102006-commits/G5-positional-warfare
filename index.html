@@ -2,248 +2,401 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🌐 東勢林場終端據點戰情室 | 據點攻防戰</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>🌐 東勢林場終端據點戰情室 | 據點攻防戰術系統</title>
+    
+    <!-- 引入 Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class'
+        }
+    </script>
     
     <!-- 🎵 Tone.js 音效套件 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
     
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
+    <!-- Google Fonts & FontAwesome -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;700;900&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
         :root {
-            --conan-blue: #1e3a8a; /* Deep Navy */
-            --conan-red: #dc2626;  /* Bowtie Red */
-            --conan-gold: #f59e0b; /* Badge Gold */
-            --bg-dark: #f8fafc;
+            /* ☀️ 日間戰術模式 */
+            --bg-body: #dbe4ee;
+            --bg-grid-dot: #94a3b8;
+            --bg-card: #ffffff;
+            --bg-inner: #f1f5f9;
+            --card-border: #cbd5e1;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --header-blue: #1e3a8a;
+            --gold-accent: #d97706;
+            --glass-bg: rgba(255, 255, 255, 0.65);
+            --glass-border: rgba(148, 163, 184, 0.4);
+            --input-bg: #f8fafc;
+            --input-border: #cbd5e1;
+            --input-text: #0f172a;
         }
-        
+
+        /* 🌙 預設深藍戰情模式 */
+        body.dark-mode {
+            --bg-body: #0b1120;
+            --bg-grid-dot: #1e293b;
+            --bg-card: #131d31;
+            --bg-inner: #070d18;
+            --card-border: #22324d;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --header-blue: #38bdf8;
+            --gold-accent: #f59e0b;
+            --glass-bg: rgba(255, 255, 255, 0.08);
+            --glass-border: rgba(255, 255, 255, 0.18);
+            --input-bg: #070d18;
+            --input-border: #334155;
+            --input-text: #fde68a;
+        }
+
+        /* 🌟 背景點點固定不動 (background-attachment: fixed) */
         body { 
             font-family: 'Noto Sans TC', sans-serif; 
-            background-color: #e2e8f0; 
-            color: #1e293b;
-            background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+            background-color: var(--bg-body); 
+            color: var(--text-main);
+            background-image: radial-gradient(var(--bg-grid-dot) 2px, transparent 2px);
             background-size: 20px 20px;
+            background-attachment: fixed;
+            min-height: 100vh;
+            overflow-x: hidden;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            -webkit-tap-highlight-color: transparent;
         }
-        
-        .timer-font { font-family: 'Space Mono', monospace; letter-spacing: 0.05em; }
-        
-        /* 封鎖線風格 */
+
+        .timer-font { font-family: 'Space Mono', monospace; font-variant-numeric: tabular-nums; }
+
+        /* 🚧 警視廳黃黑警戒封鎖線 */
         .crime-tape {
             background: repeating-linear-gradient(
                 45deg,
                 #facc15,
-                #facc15 20px,
-                #111827 20px,
-                #111827 40px
+                #facc15 14px,
+                #111827 14px,
+                #111827 28px
             );
             border-top: 2px solid #000;
             border-bottom: 2px solid #000;
         }
 
-        /* 據點等級徽章 */
-        .level-badge-S { background-color: #fef08a; color: #854d0e; border: 1px solid #eab308; box-shadow: 0 0 10px rgba(234,179,8,0.5); }
-        .level-badge-A { background-color: #e0e7ff; color: #3730a3; border: 1px solid #6366f1; }
-        .level-badge-B { background-color: #dcfce7; color: #166534; border: 1px solid #22c55e; }
-
-        /* 小隊顏色 */
-        .team-color-0 { color: #64748b; border-color: #cbd5e1; background-color: #f1f5f9; } 
-        .team-color-1 { color: #b91c1c; border-color: #fca5a5; background-color: #fef2f2; }
-        .team-color-2 { color: #1d4ed8; border-color: #93c5fd; background-color: #eff6ff; }
-        .team-color-3 { color: #15803d; border-color: #86efac; background-color: #f0fdf4; }
-        .team-color-4 { color: #b45309; border-color: #fcd34d; background-color: #fffbeb; }
-        .team-color-5 { color: #6d28d9; border-color: #c4b5fd; background-color: #f5f3ff; }
-        .team-color-6 { color: #be185d; border-color: #f9a8d4; background-color: #fdf2f8; }
-
-        .card-shadow { box-shadow: 4px 4px 0px rgba(0,0,0,0.1); border: 2px solid #334155; }
-        .btn-shadow { box-shadow: 2px 2px 0px rgba(0,0,0,0.2); }
-        .btn-shadow:active { box-shadow: 0px 0px 0px rgba(0,0,0,0.2); transform: translate(2px, 2px); }
-
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #e2e8f0; }
-        ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
-        
-        @keyframes ping-slow { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.6); } }
-        .animate-ping-slow { animation: ping-slow 1.4s ease-in-out infinite; }
-        
-        /* 載入中動畫效果 */
-        @keyframes spin-slow { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .animate-spin-slow { animation: spin-slow 4s linear infinite; }
-        
-        @keyframes dots-jump {
-            0% { content: "."; }
-            33% { content: ".."; }
-            66% { content: "..."; }
-            100% { content: "."; }
-        }
-        .loading-dots::after {
-            content: ".";
-            animation: dots-jump 1.2s infinite steps(1);
-        }
-
-        /* 檔案夾標籤效果 */
+        /* 🗂️ 檔案夾斜切標籤 */
         .folder-tab {
             clip-path: polygon(0 0, 85% 0, 100% 100%, 0% 100%);
         }
+
+        /* 擬物風立體戰術硬卡片 */
+        .card-shadow { 
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12); 
+            border: 2px solid var(--card-border); 
+            background-color: var(--bg-card);
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        body.dark-mode .card-shadow {
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+        }
+
+        /* 💎 iPhone 極致液態毛玻璃按鍵 (iOS Glassmorphism) */
+        .glass-btn {
+            position: relative;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15), inset 0 1px 1px rgba(255, 255, 255, 0.3);
+            transition: all 0.2s cubic-bezier(0.25, 1, 0.5, 1);
+            overflow: hidden;
+        }
+        body.dark-mode .glass-btn {
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.25);
+        }
+        .glass-btn::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 45%;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0) 100%);
+            pointer-events: none;
+            border-radius: inherit;
+        }
+        .glass-btn:hover {
+            transform: translateY(-1.5px);
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.2), inset 0 1px 2px rgba(255, 255, 255, 0.4);
+        }
+        .glass-btn:active {
+            transform: scale(0.96) translateY(0px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        /* 各種功能專屬玻璃色系 */
+        .glass-btn-blue {
+            background: linear-gradient(135deg, rgba(30, 58, 138, 0.85), rgba(14, 116, 144, 0.85));
+            border-color: rgba(56, 189, 248, 0.6);
+            color: #ffffff;
+        }
+        body.dark-mode .glass-btn-blue {
+            background: linear-gradient(135deg, rgba(14, 116, 144, 0.4), rgba(30, 58, 138, 0.55));
+            color: #38bdf8;
+        }
+        .glass-btn-blue:hover {
+            background: linear-gradient(135deg, rgba(29, 78, 216, 0.95), rgba(2, 132, 199, 0.95));
+            color: #ffffff;
+        }
+
+        .glass-btn-red {
+            background: linear-gradient(135deg, rgba(220, 38, 38, 0.85), rgba(185, 28, 28, 0.85));
+            border-color: rgba(248, 113, 113, 0.6);
+            color: #ffffff;
+        }
+        body.dark-mode .glass-btn-red {
+            background: linear-gradient(135deg, rgba(185, 28, 28, 0.4), rgba(153, 27, 27, 0.55));
+            color: #fca5a5;
+        }
+        .glass-btn-red:hover {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.95), rgba(220, 38, 38, 0.95));
+            color: #ffffff;
+        }
+
+        .glass-btn-amber {
+            background: linear-gradient(135deg, rgba(217, 119, 6, 0.85), rgba(180, 83, 9, 0.85));
+            border-color: rgba(251, 191, 36, 0.6);
+            color: #ffffff;
+        }
+        body.dark-mode .glass-btn-amber {
+            background: linear-gradient(135deg, rgba(217, 119, 6, 0.4), rgba(180, 83, 9, 0.55));
+            color: #fde047;
+        }
+        .glass-btn-amber:hover {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.95), rgba(217, 119, 6, 0.95));
+            color: #ffffff;
+        }
+
+        /* 📱 側邊懸浮動作中樞 (Floating Dock) */
+        .side-floating-dock {
+            position: fixed;
+            right: 16px;
+            bottom: 24px;
+            z-index: 50;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* 據點等級標籤 */
+        .level-badge-S { background: rgba(234, 179, 8, 0.2); color: #b45309; border: 1px solid #eab308; }
+        body.dark-mode .level-badge-S { color: #fde047; box-shadow: 0 0 15px rgba(234, 179, 8, 0.4); }
+        
+        .level-badge-A { background: rgba(99, 102, 241, 0.2); color: #4338ca; border: 1px solid #6366f1; }
+        body.dark-mode .level-badge-A { color: #a5b4fc; box-shadow: 0 0 12px rgba(99, 102, 241, 0.3); }
+        
+        .level-badge-B { background: rgba(34, 197, 94, 0.2); color: #15803d; border: 1px solid #22c55e; }
+        body.dark-mode .level-badge-B { color: #86efac; box-shadow: 0 0 10px rgba(34, 197, 94, 0.25); }
+
+        /* 小隊專屬色彩識別 */
+        .team-badge-0 { background: rgba(148, 163, 184, 0.15); color: #64748b; border: 1px solid #94a3b8; }
+        .team-badge-1 { background: rgba(239, 68, 68, 0.15); color: #dc2626; border: 1px solid #ef4444; }
+        .team-badge-2 { background: rgba(59, 130, 246, 0.15); color: #2563eb; border: 1px solid #3b82f6; }
+        .team-badge-3 { background: rgba(34, 197, 94, 0.15); color: #16a34a; border: 1px solid #22c55e; }
+        .team-badge-4 { background: rgba(245, 158, 11, 0.15); color: #d97706; border: 1px solid #f59e0b; }
+        .team-badge-5 { background: rgba(168, 85, 247, 0.15); color: #9333ea; border: 1px solid #a855f7; }
+        .team-badge-6 { background: rgba(236, 72, 153, 0.15); color: #db2777; border: 1px solid #ec4899; }
+
+        body.dark-mode .team-badge-0 { color: #94a3b8; border-color: #475569; }
+        body.dark-mode .team-badge-1 { color: #fca5a5; border-color: #ef4444; }
+        body.dark-mode .team-badge-2 { color: #93c5fd; border-color: #3b82f6; }
+        body.dark-mode .team-badge-3 { color: #86efac; border-color: #22c55e; }
+        body.dark-mode .team-badge-4 { color: #fde047; border-color: #f59e0b; }
+        body.dark-mode .team-badge-5 { color: #d8b4fe; border-color: #a855f7; }
+        body.dark-mode .team-badge-6 { color: #f9a8d4; border-color: #ec4899; }
+
+        @keyframes spinSlow { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .animate-spin-slow { animation: spinSlow 5s linear infinite; }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-inner); }
+        ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
+        body.dark-mode ::-webkit-scrollbar-thumb { background: #334155; }
     </style>
 </head>
-<body class="p-3 md:p-6 lg:p-8 min-h-screen relative">
+<body class="dark-mode p-3 sm:p-4 md:p-6 lg:p-8 relative selection:bg-sky-500/30">
 
-    <div id="custom-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center opacity-0 transition-opacity duration-300">
-        <div class="bg-white p-6 rounded-xl max-w-sm w-full mx-4 card-shadow transform transition-transform scale-95" id="custom-modal-content">
-            <div class="flex items-center gap-3 mb-4 border-b-2 border-red-600 pb-2">
-                <div class="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center text-red-600">
+    <!-- 🌐 自訂彈出視窗 (Modal) -->
+    <div id="custom-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center opacity-0 transition-opacity duration-300 p-4">
+        <div class="card-shadow p-6 rounded-3xl max-w-sm w-full mx-auto transform transition-transform scale-95 border-2 border-sky-500/40 relative" id="custom-modal-content">
+            <div class="flex items-center gap-3 mb-4 border-b-2 border-slate-300 dark:border-slate-700/80 pb-3">
+                <div class="w-10 h-10 rounded-2xl glass-btn flex items-center justify-center text-sky-600 dark:text-sky-400">
                     <i class="fa-solid fa-magnifying-glass"></i>
                 </div>
-                <h3 id="modal-title" class="text-xl font-bold text-slate-800">搜查提示</h3>
+                <h3 id="modal-title" class="text-lg font-black text-slate-800 dark:text-slate-100">搜查終端指示</h3>
             </div>
-            <p id="modal-message" class="text-slate-600 text-sm mb-5 leading-relaxed font-medium">訊息內容</p>
-            <input type="password" id="modal-input" class="hidden w-full bg-slate-100 border-2 border-slate-300 rounded-lg px-3 py-2.5 text-slate-800 mb-5 focus:outline-none focus:border-red-500 transition font-mono tracking-widest text-center text-lg" placeholder="輸入解密金鑰" />
+            <p id="modal-message" class="text-slate-600 dark:text-slate-300 text-sm mb-5 leading-relaxed font-medium">訊息內容</p>
+            <input type="password" id="modal-input" class="hidden w-full rounded-2xl px-4 py-3 text-amber-600 dark:text-amber-300 mb-5 focus:outline-none focus:border-sky-400 transition font-mono tracking-widest text-center text-lg border-2" style="background-color: var(--input-bg); border-color: var(--input-border);" placeholder="輸入解密金鑰" />
             <div class="flex justify-end gap-3">
-                <button id="modal-cancel" class="hidden px-5 py-2.5 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm font-bold transition btn-shadow w-full sm:w-auto">取消</button>
-                <button id="modal-ok" class="px-5 py-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-bold transition btn-shadow w-full sm:w-auto">確認執行</button>
+                <button id="modal-cancel" class="hidden glass-btn px-5 py-2.5 rounded-2xl text-slate-600 dark:text-slate-300 text-sm font-bold w-full sm:w-auto">取消</button>
+                <button id="modal-ok" class="glass-btn glass-btn-blue px-6 py-2.5 rounded-2xl text-white text-sm font-black w-full sm:w-auto">確認執行</button>
             </div>
         </div>
     </div>
 
-    <!-- 據點詳細資訊彈出 Modal (點擊放大) -->
-    <div id="poi-detail-modal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-50 hidden flex items-center justify-center opacity-0 transition-opacity duration-300 p-4">
-        <div class="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto card-shadow transform transition-transform scale-95 flex flex-col relative" id="poi-detail-content">
-            <button onclick="window.closePoiDetail()" class="absolute top-4 right-4 w-9 h-9 bg-slate-100 hover:bg-red-100 text-slate-600 hover:text-red-600 rounded-full flex items-center justify-center transition border-2 border-slate-300 z-10 btn-shadow">
+    <!-- 🔍 據點詳細資訊彈出 Modal (點擊卡片放大) -->
+    <div id="poi-detail-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center opacity-0 transition-opacity duration-300 p-4">
+        <div class="card-shadow rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto transform transition-transform scale-95 flex flex-col relative border-2 border-sky-500/30" id="poi-detail-content">
+            <button onclick="window.closePoiDetail()" class="absolute top-4 right-4 w-10 h-10 glass-btn rounded-full flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-red-500 transition z-10">
                 <i class="fa-solid fa-xmark text-lg"></i>
             </button>
-            <div id="poi-detail-body" class="p-6">
-                <!-- 由 JS 動態填入據點完整詳情 -->
+            <div id="poi-detail-body" class="p-6 sm:p-7">
+                <!-- 由 JS 動態注入 -->
             </div>
         </div>
     </div>
 
-    <div id="announcement-banner" class="hidden max-w-[1400px] mx-auto mb-4 md:mb-6 bg-white card-shadow rounded-xl flex flex-col overflow-hidden">
-        <div class="crime-tape h-4 w-full"></div>
-        <div class="p-3 md:p-4 flex items-center gap-3 md:gap-4 relative overflow-hidden">
-            <div class="bg-yellow-100 p-2 md:p-3 rounded-full border-2 border-yellow-400 relative z-10 flex-shrink-0">
-                <i class="fa-solid fa-triangle-exclamation text-yellow-600 fa-lg md:fa-xl animate-bounce"></i>
+    <!-- 🚨 全域緊急作戰廣播條 -->
+    <div id="announcement-banner" class="hidden max-w-[1400px] mx-auto mb-4 md:mb-6 card-shadow rounded-2xl flex flex-col overflow-hidden border-2 border-amber-500/60">
+        <div class="crime-tape h-3.5 w-full"></div>
+        <div class="p-3.5 md:p-4 flex items-center gap-3.5 md:gap-4 relative bg-amber-50 dark:bg-amber-950/40">
+            <div class="bg-amber-100 dark:bg-amber-900/60 p-2.5 rounded-2xl border-2 border-amber-500/60 flex-shrink-0">
+                <i class="fa-solid fa-triangle-exclamation text-amber-600 dark:text-amber-400 fa-lg md:fa-xl animate-bounce"></i>
             </div>
-            <div class="relative z-10 flex-1">
-                <h3 class="text-slate-500 font-bold text-[10px] md:text-xs tracking-widest mb-0.5 md:mb-1">🚨 警視廳緊急通報</h3>
-                <p id="announcement-text" class="text-slate-800 text-sm md:text-xl font-black tracking-wide leading-tight">通報讀取中...</p>
+            <div class="flex-1">
+                <h3 class="text-amber-700 dark:text-amber-400/80 font-bold text-[10px] md:text-xs tracking-widest uppercase">🚨 警視廳緊急通報 (HEADQUARTERS DISPATCH)</h3>
+                <p id="announcement-text" class="text-slate-900 dark:text-slate-100 text-sm md:text-lg font-black tracking-wide leading-tight">通報讀取中...</p>
             </div>
+            <span class="bg-red-600 text-white text-[10px] md:text-xs font-black px-2.5 py-1 rounded-full border border-red-500 animate-pulse">LIVE</span>
         </div>
-        <div class="crime-tape h-4 w-full"></div>
+        <div class="crime-tape h-3.5 w-full"></div>
     </div>
 
-    <div id="battle-ticker" class="hidden sticky top-2 z-40 max-w-[1400px] mx-auto mb-4 bg-white/90 backdrop-blur card-shadow rounded-full px-4 py-2 flex items-center gap-3 overflow-x-auto">
-        <span class="flex items-center gap-1.5 text-red-600 text-xs font-black shrink-0 pr-3 border-r-2 border-slate-300">
-            <i class="fa-solid fa-siren-on animate-pulse"></i> 衝突發生中
+    <!-- ⚔️ 衝突速報浮動條 -->
+    <div id="battle-ticker" class="hidden sticky top-3 z-40 max-w-[1400px] mx-auto mb-4 glass-btn rounded-full px-4 py-2 flex items-center gap-3 overflow-x-auto border-red-500/50" style="background-color: var(--bg-card);">
+        <span class="flex items-center gap-1.5 text-red-600 dark:text-red-400 text-xs font-black shrink-0 pr-3 border-r-2 border-slate-300 dark:border-slate-700">
+            <i class="fa-solid fa-siren-on animate-pulse"></i> 衝突交火中
         </span>
         <div id="battle-ticker-list" class="flex items-center gap-2"></div>
     </div>
 
-    <header class="max-w-[1400px] mx-auto flex justify-between items-end mb-6 pb-4 border-b-4 border-[#1e3a8a]">
+    <!-- 📡 頂部指揮中樞 Header (已修正：G5-1 完整顯示且不被裁切) -->
+    <header class="max-w-[1400px] mx-auto flex justify-between items-center mb-6 pb-4 border-b-4 border-blue-900 dark:border-sky-500">
         <div class="flex items-center gap-3 md:gap-4">
-            <div class="bg-[#1e3a8a] text-white p-3 md:p-4 rounded-xl btn-shadow relative shadow-lg shadow-blue-900/20">
-                <i class="fa-solid fa-user-secret fa-xl md:fa-2xl"></i>
-                <div class="absolute -bottom-2 -right-2 bg-red-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full border-2 border-white">G5-1</div>
+            <!-- 🌟 獨立圖層包裝：徹底解決 G5-1 被 overflow:hidden 切除的問題 -->
+            <div class="relative shrink-0">
+                <div class="glass-btn glass-btn-blue p-3.5 md:p-4 rounded-2xl flex items-center justify-center shadow-lg">
+                    <i class="fa-solid fa-user-secret text-2xl md:text-3xl text-amber-400"></i>
+                </div>
+                <div class="absolute -bottom-1.5 -right-1.5 bg-red-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full border-2 border-slate-900 shadow-md z-10 leading-none flex items-center justify-center">
+                    G5-1
+                </div>
             </div>
+
             <div>
-                <h1 class="text-2xl md:text-4xl font-black text-[#1e3a8a] tracking-tight mb-1">
+                <h1 class="text-xl sm:text-2xl md:text-3xl font-black text-blue-950 dark:text-sky-400 tracking-wider flex items-center gap-2">
                     東勢林場終端據點戰情室
                 </h1>
-                <p class="text-xs md:text-sm text-slate-500 font-bold tracking-widest">DONGSHI FOREST TACTICAL OPERATIONS CENTER</p>
+                <p class="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 font-bold tracking-widest timer-font">DONGSHI FOREST TACTICAL OPERATIONS CENTER</p>
             </div>
         </div>
-        <div class="flex flex-col gap-2">
-            <button id="admin-login-btn" class="bg-slate-800 hover:bg-slate-700 text-white transition px-4 md:px-6 py-2.5 rounded-lg text-xs md:text-sm font-bold btn-shadow flex items-center gap-2">
-                <i class="fa-solid fa-id-badge"></i> 搜查官登入
-            </button>
-            <button id="admin-logout-btn" class="hidden bg-slate-200 hover:bg-slate-300 text-slate-700 border-2 border-slate-400 transition px-4 md:px-6 py-2 rounded-lg text-xs md:text-sm font-bold btn-shadow flex items-center gap-2">
-                <i class="fa-solid fa-door-open"></i> 結束值勤
-            </button>
+
+        <div class="flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-slate-400 timer-font glass-btn px-3.5 py-1.5 rounded-full">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> ONLINE
         </div>
     </header>
 
     <main class="max-w-[1400px] mx-auto grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
 
-        <!-- Mobile Tab Bar -->
+        <!-- Mobile 頁籤切換器 -->
         <div id="mobile-tab-bar" class="hidden xl:hidden col-span-1 w-full grid grid-cols-2 gap-3 mb-2">
-            <button id="tab-status-btn" onclick="window.setMobileTab('status')" class="py-3 rounded-lg text-sm font-bold transition bg-[#1e3a8a] text-white btn-shadow border-2 border-[#1e3a8a]">
-                <i class="fa-solid fa-map-location-dot mr-1"></i> 搜查現場
+            <button id="tab-status-btn" onclick="window.setMobileTab('status')" class="glass-btn glass-btn-blue py-3 rounded-2xl text-sm font-black">
+                <i class="fa-solid fa-map-location-dot mr-1.5"></i> 搜查戰況現場
             </button>
-            <button id="tab-admin-btn" onclick="window.setMobileTab('admin')" class="py-3 rounded-lg text-sm font-bold transition bg-white text-slate-600 border-2 border-slate-300 btn-shadow">
-                <i class="fa-solid fa-walkie-talkie mr-1"></i> 控制終端
+            <button id="tab-admin-btn" onclick="window.setMobileTab('admin')" class="glass-btn py-3 rounded-2xl text-sm font-bold text-slate-600 dark:text-slate-300">
+                <i class="fa-solid fa-walkie-talkie mr-1.5"></i> 指揮控制終端
             </button>
         </div>
-        
+
+        <!-- 💰 小隊搜查資金榜 -->
         <section id="leaderboard-section" class="xl:col-span-12 w-full mb-2 hidden">
-            <div class="flex items-center gap-2 mb-3 pl-1">
-                <i class="fa-solid fa-chart-line text-blue-700"></i>
-                <h2 class="font-black text-base md:text-lg text-slate-800 tracking-wide">小隊搜查資金即時榜</h2>
+            <div class="flex items-center justify-between pl-1 mb-3">
+                <div class="flex items-center gap-2">
+                    <div class="w-6 h-6 bg-amber-500 rounded-lg flex items-center justify-center text-slate-900 font-black">
+                        <i class="fa-solid fa-coins text-xs"></i>
+                    </div>
+                    <h2 class="font-black text-base sm:text-lg text-slate-800 dark:text-slate-100 tracking-wide">小隊搜查資金即時戰略榜</h2>
+                </div>
+                <span class="text-xs text-slate-400 font-mono tracking-widest hidden sm:inline">REAL-TIME FUNDS</span>
             </div>
-            <div id="global-leaderboard" class="flex overflow-x-auto gap-3 md:gap-4 w-full pt-6 pb-4 snap-x snap-mandatory px-2">
+            <div id="global-leaderboard" class="flex overflow-x-auto gap-3.5 md:gap-4.5 w-full pt-4 pb-4 snap-x snap-mandatory px-1">
                 <!-- 由 JS 動態生成 -->
             </div>
         </section>
 
-        <div id="admin-section" class="hidden xl:col-span-5 flex flex-col gap-6 w-full max-w-[100vw]">
-            <div class="bg-white rounded-xl overflow-hidden card-shadow relative">
-                <!-- Top decorative bar -->
-                <div class="h-3 w-full bg-slate-800 flex items-center px-2 gap-1">
+        <!-- ⚙️ 後台：指揮官控制終端 -->
+        <div id="admin-section" class="hidden xl:col-span-5 flex flex-col gap-5 w-full max-w-[100vw]">
+            <div class="card-shadow rounded-3xl overflow-hidden border-2 border-blue-900/30 dark:border-sky-500/40">
+                
+                <!-- 頂部視窗控制飾條 -->
+                <div class="h-3 w-full bg-slate-200 dark:bg-slate-900 flex items-center px-3 gap-1.5 border-b border-slate-300 dark:border-slate-800">
                     <div class="w-2 h-2 rounded-full bg-red-500"></div>
-                    <div class="w-2 h-2 rounded-full bg-yellow-400"></div>
+                    <div class="w-2 h-2 rounded-full bg-amber-400"></div>
                     <div class="w-2 h-2 rounded-full bg-green-500"></div>
                 </div>
-                
-                <div class="p-5 pb-3 border-b-2 border-slate-100">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-600 border border-slate-300">
-                            <i class="fa-solid fa-desktop fa-lg"></i>
-                        </div>
-                        <div>
-                            <h2 class="text-xl font-black text-slate-800 flex items-center gap-2 leading-none" id="admin-role-title">警視廳指揮中心</h2>
-                            <p class="text-xs text-slate-500 mt-1 font-medium">系統權限：已授權變更據點狀態與發送通報。</p>
-                        </div>
+
+                <div class="p-5 pb-4 border-b border-slate-200 dark:border-slate-800 flex items-center gap-3.5" style="background-color: var(--bg-inner);">
+                    <div class="w-11 h-11 glass-btn rounded-2xl flex items-center justify-center text-blue-800 dark:text-sky-400 text-lg shrink-0">
+                        <i class="fa-solid fa-sliders"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-black text-slate-800 dark:text-slate-100 leading-tight" id="admin-role-title">警視廳指揮中心 (最高權限)</h2>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">系統狀態：已授權介入據點狀態、發布廣播與結算分數。</p>
                     </div>
                 </div>
 
-                <!-- Global Alerts Tools (Super Admin Only) -->
-                <div id="admin-global-tools" class="px-5 py-4 border-b border-slate-200 bg-slate-50 hidden">
-                    <label class="text-xs font-bold text-slate-500 mb-2 block"><i class="fa-solid fa-tower-broadcast mr-1"></i> 全域廣播系統</label>
+                <!-- 全域廣播控制 (Super Admin Only) -->
+                <div id="admin-global-tools" class="p-4 border-b border-slate-200 dark:border-slate-800 hidden" style="background-color: var(--bg-card);">
+                    <label class="text-xs font-bold text-amber-600 dark:text-amber-400 mb-2 block flex items-center gap-1.5">
+                        <i class="fa-solid fa-bullhorn"></i> 全域廣播發布系統
+                    </label>
                     <div class="flex flex-col sm:flex-row gap-2">
-                        <input type="text" id="admin-alert-input" class="flex-1 bg-white border-2 border-slate-300 text-slate-800 rounded-lg px-3 py-2 text-sm outline-none focus:border-red-500 transition shadow-inner" placeholder="輸入緊急通報內容...">
+                        <input type="text" id="admin-alert-input" class="flex-1 rounded-2xl px-3.5 py-2 text-xs sm:text-sm font-bold outline-none border-2" style="background-color: var(--input-bg); border-color: var(--input-border); color: var(--input-text);" placeholder="輸入緊急作戰通報內容...">
                         <div class="flex gap-2">
-                            <button onclick="window.pushAlert()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-bold w-full sm:w-auto transition btn-shadow">發布</button>
-                            <button onclick="window.clearAlert()" class="bg-slate-300 hover:bg-slate-400 text-slate-700 px-4 py-2 rounded-lg text-sm font-bold w-full sm:w-auto transition btn-shadow">清除</button>
+                            <button onclick="window.pushAlert()" class="glass-btn glass-btn-red px-4 py-2 rounded-2xl text-xs sm:text-sm font-black flex-1 sm:flex-none">發布</button>
+                            <button onclick="window.clearAlert()" class="glass-btn px-3 py-2 rounded-2xl text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-bold">清除</button>
                         </div>
                     </div>
                 </div>
 
-                <!-- POI Management List -->
-                <div class="px-4 py-3 flex flex-col gap-4 bg-slate-100" id="admin-poi-list">
+                <!-- POI 據點操控清單 -->
+                <div class="p-4 flex flex-col gap-3.5" style="background-color: var(--bg-inner);" id="admin-poi-list">
                     <!-- 由 JS 動態生成 -->
                 </div>
 
-                <!-- Sync Scores Tool (Super Admin Only) -->
-                <div id="admin-sync-tools" class="px-5 py-4 border-t-2 border-slate-200 bg-blue-50 hidden">
-                    <label class="text-xs font-bold text-blue-700 mb-2 block"><i class="fa-solid fa-paper-plane mr-1"></i> 分數結算與同步</label>
-                    <button onclick="window.sendScoresToCampingSystem()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-sm font-bold transition flex items-center justify-center gap-2 btn-shadow w-full">
+                <!-- 🌟 傳送分數至總部計分板 (Super Admin Only) -->
+                <div id="admin-sync-tools" class="p-4 border-t border-slate-200 dark:border-slate-800 hidden" style="background-color: var(--bg-card);">
+                    <label class="text-xs font-bold text-blue-800 dark:text-sky-400 mb-2 block flex items-center gap-1.5">
+                        <i class="fa-solid fa-paper-plane"></i> 結算成績匯出
+                    </label>
+                    <button onclick="window.sendScoresToCampingSystem()" class="glass-btn glass-btn-blue py-3 rounded-2xl text-xs sm:text-sm font-black w-full flex items-center justify-center gap-2">
                         <i class="fa-solid fa-cloud-arrow-up animate-bounce"></i> 傳送戰況分數至宿營總計分系統
                     </button>
                 </div>
 
-                <!-- Danger Zone (Super Admin Only) -->
-                <div id="admin-danger-zone" class="px-5 pb-5 pt-4 border-t-2 border-slate-200 bg-white mt-auto flex flex-col sm:flex-row justify-between items-center gap-3 hidden">
-                    <div class="flex items-center gap-2 border-2 border-slate-300 bg-slate-50 rounded-lg p-1.5 max-w-[200px] w-full sm:w-auto">
-                        <i class="fa-solid fa-image text-slate-400 ml-1"></i>
-                        <span class="text-xs text-slate-600 truncate flex-1 font-medium" id="map-file-name">更新作戰地圖...</span>
-                        <label class="bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold px-3 py-1.5 rounded cursor-pointer shrink-0 transition btn-shadow">
+                <!-- 危險管理區 (Super Admin Only) -->
+                <div id="admin-danger-zone" class="p-4 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row justify-between items-center gap-3 hidden" style="background-color: var(--bg-inner);">
+                    <div class="flex items-center gap-2 border border-slate-300 dark:border-slate-700 bg-white/70 dark:bg-slate-900/90 rounded-2xl p-1.5 max-w-[200px] w-full sm:w-auto">
+                        <i class="fa-solid fa-image text-slate-400 ml-1.5"></i>
+                        <span class="text-xs text-slate-600 dark:text-slate-300 truncate flex-1 font-medium" id="map-file-name">更新作戰地圖...</span>
+                        <label class="glass-btn glass-btn-blue text-xs font-black px-3 py-1 rounded-xl cursor-pointer shrink-0">
                             瀏覽
                             <input type="file" id="map-upload" class="hidden" accept="image/*">
                         </label>
                     </div>
-                    <button id="reset-game-btn" class="relative overflow-hidden bg-white hover:bg-red-50 text-red-600 border-2 border-red-200 px-4 py-2.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-2 btn-shadow w-full sm:w-auto group">
-                        <div id="reset-progress" class="absolute inset-0 bg-red-100 w-0 z-0"></div>
+                    
+                    <button id="reset-game-btn" class="relative overflow-hidden glass-btn glass-btn-red px-4 py-2.5 rounded-2xl text-xs font-black w-full sm:w-auto flex items-center justify-center gap-2 group">
+                        <div id="reset-progress" class="absolute inset-0 bg-red-600/30 w-0 z-0"></div>
                         <i class="fa-solid fa-triangle-exclamation relative z-10 group-hover:animate-pulse"></i> 
                         <span class="relative z-10">長按 2 秒重置系統</span>
                     </button>
@@ -251,46 +404,67 @@
             </div>
         </div>
 
+        <!-- 🛡️ 前台：據點監視檔案 -->
         <div id="status-section" class="xl:col-span-12 flex flex-col gap-4 transition-all w-full">
             
-            <div id="map-display-container" class="hidden w-full bg-white card-shadow rounded-xl overflow-hidden">
-                <div class="px-4 py-2 bg-slate-800 flex justify-between items-center">
-                    <span class="text-sm font-bold text-white tracking-widest"><i class="fa-solid fa-map-location text-red-400 mr-2"></i>東勢林場調查區域圖</span>
+            <!-- 作戰地圖區塊 -->
+            <div id="map-display-container" class="hidden w-full card-shadow rounded-3xl overflow-hidden border-2 border-blue-900/30 dark:border-sky-500/40">
+                <div class="px-5 py-3 flex justify-between items-center border-b border-slate-200 dark:border-slate-800" style="background-color: var(--bg-inner);">
+                    <span class="text-xs sm:text-sm font-black text-blue-900 dark:text-sky-400 tracking-widest"><i class="fa-solid fa-map-location text-red-500 mr-2"></i>東勢林場現場調查區域圖</span>
                 </div>
-                <div class="p-2 bg-slate-100">
-                    <img id="map-image" src="" alt="作戰地圖" class="w-full h-auto object-contain max-h-[250px] md:max-h-[400px] rounded border border-slate-300 bg-white">
+                <div class="p-3" style="background-color: var(--bg-card);">
+                    <img id="map-image" src="" alt="作戰地圖" class="w-full h-auto object-contain max-h-[250px] md:max-h-[400px] rounded-2xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-900">
                 </div>
             </div>
             
-            <div class="flex items-center gap-2 pl-1 mb-1 mt-2">
-                <div class="w-6 h-6 bg-red-600 rounded flex items-center justify-center text-white transform -rotate-6">
+            <div class="flex items-center gap-2 pl-1 mb-1 mt-1">
+                <div class="w-6 h-6 bg-red-600 rounded-lg flex items-center justify-center text-white transform -rotate-6">
                     <i class="fa-solid fa-thumbtack text-xs"></i>
                 </div>
-                <h2 class="font-black text-lg md:text-xl text-slate-800 tracking-wider">據點監視檔案</h2>
+                <h2 class="font-black text-lg md:text-xl text-slate-800 dark:text-slate-100 tracking-wider">據點情報監視檔案</h2>
             </div>
 
             <div id="poi-cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-2 gap-5 w-full pb-10">
-                <!-- 載入中動畫 -->
-                <div class="w-full xl:col-span-2 bg-white card-shadow rounded-2xl p-10 md:p-14 flex flex-col items-center justify-center text-slate-700 my-4 border-2 border-blue-900" id="loading-spinner">
+                <!-- 連線中動態動畫 -->
+                <div class="w-full xl:col-span-2 card-shadow rounded-3xl p-10 md:p-14 flex flex-col items-center justify-center my-4 border-2 border-blue-900/30 dark:border-sky-500/40" id="loading-spinner">
                     <div class="relative w-32 h-32 md:w-36 md:h-36 mb-6 flex items-center justify-center">
-                        <div class="absolute inset-0 rounded-full border-4 border-dashed border-blue-800 animate-spin-slow"></div>
-                        <img src="IMG_1716.jpg" onerror="this.onerror=null; this.src='https://placehold.co/200x200/1e3a8a/ffffff?text=連線中'" alt="連線中" class="w-24 h-24 md:w-28 md:h-28 rounded-full object-cover shadow-lg border-2 border-slate-200 animate-spin-slow">
+                        <div class="absolute inset-0 rounded-full border-4 border-dashed border-sky-400 animate-spin-slow"></div>
+                        <img src="IMG_1716.jpg" onerror="this.onerror=null; this.src='https://placehold.co/200x200/1e3a8a/ffffff?text=連線中'" alt="連線中" class="w-24 h-24 md:w-28 md:h-28 rounded-full object-cover shadow-2xl border-2 border-sky-400 animate-spin-slow">
                     </div>
-                    <div class="text-lg md:text-2xl font-black text-[#1e3a8a] tracking-wider flex items-center gap-1" id="loading-text">
-                        <i class="fa-solid fa-database text-red-600 mr-2"></i>連線中<span class="loading-dots font-mono text-xl md:text-3xl text-red-600 inline-block w-8"></span>
+                    <div class="text-lg md:text-2xl font-black text-blue-900 dark:text-sky-400 tracking-wider flex items-center gap-1" id="loading-text">
+                        <i class="fa-solid fa-satellite-dish text-red-500 mr-2 animate-pulse"></i> 戰術雲端連線中<span class="timer-font text-xl md:text-3xl text-red-500 inline-block w-8">...</span>
                     </div>
-                    <p class="text-xs md:text-sm text-slate-500 font-bold mt-2 tracking-widest">CMU DBMI x CSMU MI 115 新生宿營戰術連線</p>
+                    <p class="text-xs md:text-sm text-slate-400 font-bold mt-2 tracking-widest timer-font">CMU DBMI x CSMU MI 115 CAMPING WARFARE</p>
                 </div>
             </div>
         </div>
 
     </main>
 
+    <!-- ==================== 📱 側邊懸浮動作中樞 (Floating Action Dock) ==================== -->
+    <div class="side-floating-dock" id="sideFloatingDock">
+        <!-- ☀️/🌙 日夜模式切換按鈕 -->
+        <button onclick="window.toggleTheme()" id="themeBtn" class="w-12 h-12 sm:w-14 sm:h-14 glass-btn rounded-2xl flex items-center justify-center text-amber-500 dark:text-yellow-400 text-lg sm:text-xl shadow-2xl transition" title="切換白天/夜間模式">
+            <i class="fa-solid fa-sun"></i>
+        </button>
+
+        <!-- 搜查官登入按鈕 -->
+        <button id="admin-login-btn" class="w-12 h-12 sm:w-14 sm:h-14 glass-btn glass-btn-blue rounded-2xl flex items-center justify-center text-white text-lg sm:text-xl shadow-2xl transition" title="搜查官登入">
+            <i class="fa-solid fa-id-badge"></i>
+        </button>
+
+        <!-- 結束值勤按鈕 (登入後替換登入按鈕) -->
+        <button id="admin-logout-btn" class="hidden w-12 h-12 sm:w-14 sm:h-14 glass-btn glass-btn-red rounded-2xl flex items-center justify-center text-white text-lg sm:text-xl shadow-2xl transition" title="結束值勤">
+            <i class="fa-solid fa-door-open"></i>
+        </button>
+    </div>
+
+    <!-- 🟡 JavaScript Logic -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, doc, onSnapshot, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, onSnapshot, setDoc, updateDoc, initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // --- 觸覺回饋（震動）輔助函式 ---
+        // --- 觸覺回饋（震動）---
         function triggerHaptic(type = 'light') {
             if ('vibrate' in navigator) {
                 try {
@@ -301,7 +475,7 @@
             }
         }
 
-        // --- 音效解鎖與播放邏輯 ---
+        // --- 音效解鎖與播放邏輯 (Tone.js 登-登-登-登) ---
         document.body.addEventListener('click', async () => {
             if (window.Tone && Tone.context.state !== 'running') {
                 await Tone.start();
@@ -318,7 +492,6 @@
                     }).toDestination();
                     
                     const now = Tone.now();
-                    // 登-登-登-登
                     synth.triggerAttackRelease("C5", "8n", now);
                     synth.triggerAttackRelease("E5", "8n", now + 0.15);
                     synth.triggerAttackRelease("G5", "8n", now + 0.30);
@@ -330,11 +503,11 @@
             }
         }
 
-        // --- 據點資訊與設定 ---
+        // --- 據點遊戲資訊庫 ---
         const poiGameInfo = {
             "S1": { type: "終極密碼解碼戰 / 斯巴達盲劍客 / 伺服器重啟(扭扭樂)", desc: "地圖正中央，四戰之地。適合大部隊火拼！" },
-            "A1": { type: "搶水瓶 / 金曲猜猜樂 / 死亡數字1-13", desc: "在涼亭的遮蔽下，考驗反應、爆發力與心機！" },
-            "A2": { type: "搶水瓶 / 金曲猜猜樂 / 死亡數字1-13", desc: "在涼亭的遮蔽下，考驗反應、爆發力與心機！" },
+            "A1": { type: "搶水瓶 / 金曲猜猜樂 / 死亡數字1-13", desc: "恐龍出沒與親水交界的危險地帶，考驗反應、爆發力與心機！" },
+            "A2": { type: "搶水瓶 / 金曲猜猜樂 / 死亡數字1-13", desc: "恐龍出沒與親水交界的危險地帶，考驗反應、爆發力與心機！" },
             "B1": { type: "泰山鬥雞防衛戰 / 快問快答 / 沸騰溫泉蛙跳", desc: "體能訓練與生活後勤區，偏向歡樂對決，極度消耗體力！" },
             "B2": { type: "泰山鬥雞防衛戰 / 快問快答 / 沸騰溫泉蛙跳", desc: "體能訓練與生活後勤區，偏向歡樂對決，極度消耗體力！" }
         };
@@ -349,9 +522,9 @@
         };
 
         const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        
-        // 使用 v2 節點
+        const db = initializeFirestore(app, {
+            localCache: persistentLocalCache({tabManager: persistentMultipleTabManager()})
+        });
         const gameRef = doc(db, 'rpg_game', 'g5_1_conan_state_v2'); 
 
         let adminRole = null; 
@@ -364,7 +537,6 @@
             '7701': 'S1', '7702': 'A1', '7703': 'A2', '7704': 'B1', '7705': 'B2'
         };
 
-        // 🌟 據點分數已更新為 S:300, A:200, B:100
         const defaultState = {
             mapUrl: "", alertMsg: "",
             teams: [
@@ -373,25 +545,24 @@
                 { name: "第 5 小隊", wealth: 0 }, { name: "第 6 小隊", wealth: 0 }
             ],
             pois: [
-                { id: "S1", name: "侏羅紀公園", level: "S", owner: "未佔領", income: 300, isHidden: false, isBattling: false, battleStartTime: 0, accumulatedTime: 0, lastStartTime: 0, protectedUntil: 0 },
-                { id: "A1", name: "櫻花亭", level: "A", owner: "未佔領", income: 200, isHidden: false, isBattling: false, battleStartTime: 0, accumulatedTime: 0, lastStartTime: 0, protectedUntil: 0 },
-                { id: "A2", name: "得福亭", level: "A", owner: "未佔領", income: 200, isHidden: false, isBattling: false, battleStartTime: 0, accumulatedTime: 0, lastStartTime: 0, protectedUntil: 0 },
-                { id: "B1", name: "白鴿廣場", level: "B", owner: "未佔領", income: 100, isHidden: false, isBattling: false, battleStartTime: 0, accumulatedTime: 0, lastStartTime: 0, protectedUntil: 0 },
-                { id: "B2", name: "森林廣場", level: "B", owner: "未佔領", income: 100, isHidden: false, isBattling: false, battleStartTime: 0, accumulatedTime: 0, lastStartTime: 0, protectedUntil: 0 }
+                { id: "S1", name: "侏羅紀公園", level: "S", owner: "未佔領", income: 120, isHidden: false, isBattling: false, battleStartTime: 0, accumulatedTime: 0, lastStartTime: 0, protectedUntil: 0 },
+                { id: "A1", name: "櫻花亭", level: "A", owner: "未佔領", income: 90, isHidden: false, isBattling: false, battleStartTime: 0, accumulatedTime: 0, lastStartTime: 0, protectedUntil: 0 },
+                { id: "A2", name: "得福亭", level: "A", owner: "未佔領", income: 90, isHidden: false, isBattling: false, battleStartTime: 0, accumulatedTime: 0, lastStartTime: 0, protectedUntil: 0 },
+                { id: "B1", name: "白鴿廣場", level: "B", owner: "未佔領", income: 60, isHidden: false, isBattling: false, battleStartTime: 0, accumulatedTime: 0, lastStartTime: 0, protectedUntil: 0 },
+                { id: "B2", name: "森林廣場", level: "B", owner: "未佔領", income: 60, isHidden: false, isBattling: false, battleStartTime: 0, accumulatedTime: 0, lastStartTime: 0, protectedUntil: 0 }
             ]
         };
 
-        // --- Firebase Connection ---
+        // --- Firebase 即時監聽 ---
         onSnapshot(gameRef, (snap) => {
             if (!snap.exists()) { 
                 setDoc(gameRef, defaultState).catch(err => {
-                    console.error("寫入初始化資料失敗:", err);
-                    document.getElementById('loading-text').innerHTML = `<i class="fa-solid fa-triangle-exclamation text-red-600 mr-2"></i>資料庫寫入被拒 (請檢查 Firebase 權限)`;
+                    console.error("初始化資料失敗:", err);
+                    document.getElementById('loading-text').innerHTML = `<i class="fa-solid fa-triangle-exclamation text-red-500 mr-2"></i>寫入被拒 (請檢查 Firebase 權限)`;
                 });
                 return; 
             }
             const data = snap.data();
-            
             if (!data.pois || data.pois.length !== 5) {
                 setDoc(gameRef, defaultState);
                 return;
@@ -400,7 +571,7 @@
             renderUI();
         }, (error) => {
             console.error("Firebase 連線錯誤:", error);
-            document.getElementById('loading-text').innerHTML = `<i class="fa-solid fa-triangle-exclamation text-red-600 mr-2"></i>連線失敗 (請檢查 Firebase 權限與網路)`;
+            document.getElementById('loading-text').innerHTML = `<i class="fa-solid fa-triangle-exclamation text-red-500 mr-2"></i>連線失敗 (請檢查權限與網路)`;
         });
 
         // --- UI Modal ---
@@ -417,7 +588,7 @@
                 document.getElementById('modal-message').innerHTML = message;
                 
                 input.type = inputType;
-                input.placeholder = inputType === 'text' ? '請輸入新內容...' : '請輸入密碼';
+                input.placeholder = inputType === 'text' ? '請輸入新名稱...' : '請輸入授權金鑰';
                 
                 if (isPrompt) { 
                     input.classList.remove('hidden'); cancelBtn.classList.remove('hidden'); input.value = ''; 
@@ -433,24 +604,16 @@
                 const closeModal = (val) => {
                     triggerHaptic('light');
                     modal.classList.add('opacity-0'); content.classList.add('scale-95');
-                    setTimeout(() => { modal.classList.add('hidden'); resolve(val); }, 300);
+                    setTimeout(() => { modal.classList.add('hidden'); resolve(val); }, 250);
                 };
 
-                okBtn.replaceWith(okBtn.cloneNode(true));
-                cancelBtn.replaceWith(cancelBtn.cloneNode(true));
-                input.replaceWith(input.cloneNode(true));
-                
-                const newOkBtn = document.getElementById('modal-ok');
-                const newCancelBtn = document.getElementById('modal-cancel');
-                const newInput = document.getElementById('modal-input');
-
-                newOkBtn.onclick = () => closeModal(isPrompt ? newInput.value : true);
-                newCancelBtn.onclick = () => closeModal(isPrompt ? null : false);
-                newInput.onkeydown = (e) => { if(e.key === 'Enter') newOkBtn.click(); };
+                okBtn.onclick = () => closeModal(isPrompt ? input.value : true);
+                cancelBtn.onclick = () => closeModal(isPrompt ? null : false);
+                input.onkeydown = (e) => { if(e.key === 'Enter') okBtn.click(); };
             });
         }
 
-        // --- POI 放大詳細資訊 Modal ---
+        // --- POI 詳細資訊 Modal ---
         window.openPoiDetail = (idx) => {
             triggerHaptic('medium');
             if(!currentState || !currentState.pois[idx]) return;
@@ -462,41 +625,40 @@
             const body = document.getElementById('poi-detail-body');
             body.innerHTML = `
                 <div class="flex items-center gap-2 mb-3">
-                    <span class="px-2.5 py-1 rounded text-xs font-black level-badge-${poi.level}">${poi.level} CLASS</span>
+                    <span class="px-2.5 py-1 rounded-xl text-xs font-black level-badge-${poi.level}">${poi.level} CLASS</span>
                     <span class="text-xs font-mono text-slate-400">FILE ID: ${poi.id}</span>
                 </div>
-                <h2 class="text-2xl md:text-3xl font-black text-slate-800 mb-2">${poi.name}</h2>
+                <h2 class="text-2xl md:text-3xl font-black text-slate-800 dark:text-slate-100 mb-2">${poi.name}</h2>
                 
-                <div class="bg-slate-50 border-2 border-slate-200 rounded-xl p-4 mb-4 team-color-${teamNum} relative overflow-hidden">
-                    <div class="absolute inset-0 bg-current opacity-5"></div>
-                    <div class="text-xs font-bold text-slate-400 mb-1">當前佔領隊伍</div>
-                    <div class="text-xl md:text-2xl font-black text-slate-800 flex items-center gap-2">
+                <div class="border-2 rounded-2xl p-4 mb-4 team-badge-${teamNum} relative overflow-hidden" style="background-color: var(--bg-inner);">
+                    <div class="text-xs font-bold text-slate-400 mb-1">當前掌控小隊</div>
+                    <div class="text-xl md:text-2xl font-black flex items-center gap-2">
                         <i class="fa-solid fa-flag"></i> ${poi.owner}
                     </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-3 mb-5">
-                    <div class="bg-slate-100 p-3 rounded-xl border border-slate-200 text-center">
-                        <div class="text-xs text-slate-500 font-bold mb-1">被動收益</div>
-                        <div class="text-xl font-black text-yellow-600 font-mono">$${poi.income}<span class="text-xs font-normal text-slate-400">/10m</span></div>
+                    <div class="p-3.5 rounded-2xl border border-slate-300 dark:border-slate-800 text-center" style="background-color: var(--bg-inner);">
+                        <div class="text-xs text-slate-500 dark:text-slate-400 font-bold mb-1">被動資金收益</div>
+                        <div class="text-xl font-black text-amber-600 dark:text-amber-400 font-mono">$${poi.income}<span class="text-xs font-normal text-slate-400">/10m</span></div>
                     </div>
-                    <div class="bg-slate-100 p-3 rounded-xl border border-slate-200 text-center">
-                        <div class="text-xs text-slate-500 font-bold mb-1">當前狀態</div>
-                        <div class="text-sm font-black ${poi.isBattling ? 'text-red-600 animate-pulse' : 'text-emerald-600'}">
-                            ${poi.isBattling ? '⚔️ 衝突爆發中' : (poi.protectedUntil > Date.now() ? '🛡️ 現場封鎖中' : '✅ 可挑戰')}
+                    <div class="p-3.5 rounded-2xl border border-slate-300 dark:border-slate-800 text-center" style="background-color: var(--bg-inner);">
+                        <div class="text-xs text-slate-500 dark:text-slate-400 font-bold mb-1">當前戰術狀態</div>
+                        <div class="text-sm font-black ${poi.isBattling ? 'text-red-500 animate-pulse' : 'text-emerald-600 dark:text-emerald-400'}">
+                            ${poi.isBattling ? '⚔️ 衝突爆發中' : (poi.protectedUntil > Date.now() ? '🛡️ 現場封鎖中' : '✅ 可挑戰攻佔')}
                         </div>
                     </div>
                 </div>
 
-                <div class="border-t-2 border-dashed border-slate-200 pt-4 mb-2">
-                    <h4 class="text-sm font-black text-slate-700 mb-1 flex items-center gap-2">
-                        <i class="fa-solid fa-gamepad text-blue-700"></i> 關卡遊戲項目
+                <div class="border-t border-slate-200 dark:border-slate-800 pt-4 mb-2">
+                    <h4 class="text-sm font-black text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-2">
+                        <i class="fa-solid fa-gamepad text-blue-700 dark:text-sky-400"></i> 關卡遊戲項目
                     </h4>
-                    <p class="text-xs font-bold text-blue-900 bg-blue-50 p-2 rounded-lg border border-blue-200 mb-3">${info.type}</p>
-                    <h4 class="text-sm font-black text-slate-700 mb-1 flex items-center gap-2">
-                        <i class="fa-solid fa-circle-info text-slate-500"></i> 據點簡介與戰術提示
+                    <p class="text-xs font-bold text-blue-900 dark:text-sky-300 bg-blue-50 dark:bg-sky-950/40 p-3 rounded-2xl border border-blue-200 dark:border-sky-500/30 mb-3">${info.type}</p>
+                    <h4 class="text-sm font-black text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-2">
+                        <i class="fa-solid fa-circle-info text-slate-400"></i> 據點簡介與戰術提示
                     </h4>
-                    <p class="text-xs text-slate-600 leading-relaxed bg-slate-50 p-3 rounded-lg border border-slate-200">${info.desc}</p>
+                    <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800" style="background-color: var(--bg-inner);">${info.desc}</p>
                 </div>
             `;
 
@@ -511,11 +673,10 @@
             const modal = document.getElementById('poi-detail-modal');
             const content = document.getElementById('poi-detail-content');
             modal.classList.add('opacity-0'); content.classList.add('scale-95');
-            setTimeout(() => { modal.classList.add('hidden'); }, 300);
+            setTimeout(() => { modal.classList.add('hidden'); }, 250);
         };
 
-
-        // --- Core Rendering ---
+        // --- 核心渲染系統 ---
         function renderUI() {
             if (!currentState) return;
             
@@ -540,7 +701,7 @@
                 document.getElementById('map-display-container').classList.add('hidden');
             }
 
-            // 排行榜顯示
+            // 排行榜顯示 (登入後顯示)
             const leaderboardSection = document.getElementById('leaderboard-section');
             if (adminRole) leaderboardSection.classList.remove('hidden');
             else leaderboardSection.classList.add('hidden');
@@ -559,14 +720,14 @@
                 if (t.name.includes("第")) teamNum = parseInt(t.name.match(/\d+/)[0]);
 
                 return `
-                <div class="bg-white border-2 ${isLeading ? 'border-yellow-400 shadow-[0_4px_0_rgba(250,204,21,1)]' : 'border-slate-300 card-shadow'} p-3 md:p-4 rounded-xl text-center relative flex flex-col justify-center transform transition shrink-0 w-32 md:w-36 snap-start">
-                    ${isLeading ? '<div class="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-yellow-400 text-yellow-900 text-[10px] md:text-xs font-black px-3 py-0.5 rounded-full border border-yellow-500 whitespace-nowrap shadow-sm z-10"><i class="fa-solid fa-arrow-up"></i> 收入中</div>' : ''}
-                    <div class="text-xs md:text-sm text-slate-500 font-bold mb-1 flex items-center justify-center gap-1">
-                        <span class="w-2 h-2 rounded-full team-color-${teamNum} border border-current"></span> ${t.name}
+                <div class="card-shadow p-3.5 md:p-4 rounded-2xl text-center relative flex flex-col justify-center shrink-0 w-32 md:w-36 snap-start border ${isLeading ? 'border-amber-500 dark:border-amber-400 shadow-[0_0_18px_rgba(245,158,11,0.25)]' : 'border-slate-300 dark:border-slate-800'}">
+                    ${isLeading ? '<div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-amber-500 dark:bg-amber-400 text-slate-900 text-[10px] font-black px-2.5 py-0.5 rounded-full border border-amber-300 whitespace-nowrap shadow-sm z-10"><i class="fa-solid fa-arrow-up"></i> 產金中</div>' : ''}
+                    <div class="text-xs md:text-sm text-slate-600 dark:text-slate-400 font-bold mb-1 flex items-center justify-center gap-1.5">
+                        <span class="w-2.5 h-2.5 rounded-full team-badge-${teamNum}"></span> ${t.name}
                     </div>
-                    <div class="text-2xl md:text-3xl font-black text-slate-800 tracking-wider font-mono">$${t.wealth}</div>
-                    <div class="mt-2 inline-flex items-center justify-center gap-1 ${isLeading ? 'bg-yellow-100 text-yellow-700 border-yellow-300' : 'bg-slate-100 text-slate-400 border-slate-200'} text-[10px] md:text-xs font-bold px-2 py-1 rounded-md border">
-                        +${teamIncomes[t.name]} <span class="text-[9px] md:text-[10px]">/ 10m</span>
+                    <div class="text-2xl md:text-3xl font-black text-amber-600 dark:text-amber-400 tracking-wider font-mono">$${t.wealth}</div>
+                    <div class="mt-2 inline-flex items-center justify-center gap-1 ${isLeading ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-500/40' : 'bg-slate-100 dark:bg-slate-900 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-800'} text-[10px] font-bold px-2 py-0.5 rounded-lg border">
+                        +${teamIncomes[t.name]} <span class="text-[9px]">/ 10m</span>
                     </div>
                 </div>
             `}).join('');
@@ -587,55 +748,51 @@
                 if (poi.owner.includes("第")) teamNum = parseInt(poi.owner.match(/\d+/)[0]);
 
                 return `
-                    <div id="poi-card-${idx}" onclick="window.openPoiDetail(${idx})" class="bg-white card-shadow rounded-xl flex flex-col relative transition-all scroll-mt-24 cursor-pointer hover:border-blue-600 active:scale-[0.99] group ${poi.isBattling ? 'border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)]' : ''}">
+                    <div id="poi-card-${idx}" onclick="window.openPoiDetail(${idx})" class="card-shadow rounded-3xl flex flex-col relative transition-all cursor-pointer group hover:border-blue-700 dark:hover:border-sky-400 active:scale-[0.99] border-2 ${poi.isBattling ? 'border-red-500 shadow-[0_0_25px_rgba(239,68,68,0.35)]' : 'border-slate-300 dark:border-slate-800'}">
                         
-                        <div class="absolute -top-[2px] -left-[2px] bg-slate-800 text-white text-[10px] font-bold px-3 py-1 folder-tab z-10 border-b border-r border-slate-700 flex items-center gap-1">
-                            FILE: ${poi.id} <i class="fa-solid fa-up-right-and-down-left-from-center text-[9px] text-blue-300 ml-1 opacity-0 group-hover:opacity-100 transition"></i>
+                        <div class="absolute -top-[2px] -left-[2px] bg-slate-800 dark:bg-slate-900 text-white text-[10px] font-bold px-3 py-1 folder-tab z-10 border-b border-r border-slate-600 dark:border-slate-700 flex items-center gap-1.5">
+                            FILE: ${poi.id} <i class="fa-solid fa-up-right-and-down-left-from-center text-[8px] text-sky-400 opacity-0 group-hover:opacity-100 transition"></i>
                         </div>
 
-                        ${poi.isHidden ? '<div class="absolute -top-3 -right-3 bg-red-600 text-white text-[10px] px-2 py-1 rounded font-black z-20 shadow-md transform rotate-12 border-2 border-white"><i class="fa-solid fa-eye-slash"></i> 封存機密</div>' : ''}
+                        ${poi.isHidden ? '<div class="absolute -top-3 -right-3 bg-red-600 text-white text-[10px] px-2.5 py-1 rounded-xl font-black z-20 shadow-lg transform rotate-12 border border-white/40"><i class="fa-solid fa-eye-slash"></i> 封存機密</div>' : ''}
                         
-                        <div class="${big ? 'p-5 md:p-6' : 'p-4'} flex-1">
+                        <div class="${big ? 'p-5 md:p-6' : 'p-4 sm:p-5'} flex-1">
                             <div class="flex justify-between items-start mb-4 mt-2">
                                 <div class="flex flex-col items-start gap-1">
-                                    <h3 class="${big ? 'text-xl md:text-2xl' : 'text-lg md:text-xl'} font-black text-slate-800 leading-tight group-hover:text-blue-700 transition flex items-center gap-2">
-                                        ${poi.name} <i class="fa-solid fa-magnifying-glass-plus text-xs text-slate-400 group-hover:text-blue-600"></i>
+                                    <h3 class="${big ? 'text-xl md:text-2xl' : 'text-lg md:text-xl'} font-black text-slate-800 dark:text-slate-100 leading-tight group-hover:text-blue-700 dark:group-hover:text-sky-400 transition flex items-center gap-2">
+                                        ${poi.name} <i class="fa-solid fa-magnifying-glass-plus text-xs text-slate-400 group-hover:text-sky-400"></i>
                                     </h3>
-                                    <span class="px-2 py-0.5 rounded text-[10px] font-black level-badge-${poi.level} tracking-widest">${poi.level} CLASS</span>
+                                    <span class="px-2.5 py-0.5 rounded-lg text-[10px] font-black level-badge-${poi.level} tracking-widest">${poi.level} CLASS</span>
                                 </div>
-                                <div class="text-right bg-slate-50 border border-slate-200 rounded-lg px-2 py-1">
-                                    <div class="text-[10px] text-slate-400 font-bold mb-0.5">預估價值</div>
-                                    <div class="text-slate-700 font-black text-sm md:text-base leading-none">
+                                <div class="text-right border border-slate-300 dark:border-slate-800 rounded-2xl px-3 py-1.5" style="background-color: var(--bg-inner);">
+                                    <div class="text-[9px] text-slate-400 font-bold">預估價值</div>
+                                    <div class="text-amber-600 dark:text-amber-400 font-black text-sm md:text-base leading-none font-mono">
                                         $${poi.income}<span class="text-[10px] text-slate-400 font-normal">/10m</span>
                                     </div>
                                 </div>
                             </div>
 
-                            <div class="border-2 border-slate-200 rounded-lg p-3 flex flex-col items-center justify-center gap-2 mb-4 bg-slate-50 relative overflow-hidden team-color-${teamNum}">
-                                <div class="absolute inset-0 bg-current opacity-10"></div>
-                                <span class="text-xs font-bold text-slate-500 z-10 uppercase tracking-widest">CURRENT OWNER</span>
-                                <div class="flex items-center gap-2 z-10">
-                                    <div class="w-6 h-6 rounded flex items-center justify-center bg-white border-2 border-current shadow-sm">
-                                        <i class="fa-solid fa-magnifying-glass"></i>
-                                    </div>
-                                    <span class="text-lg md:text-xl font-black ${teamNum===0?'text-slate-500':'text-slate-800'}">${poi.owner}</span>
+                            <div class="rounded-2xl p-3 sm:p-3.5 flex flex-col items-center justify-center gap-1.5 mb-4 border border-slate-300 dark:border-slate-800 team-badge-${teamNum} relative overflow-hidden" style="background-color: var(--bg-inner);">
+                                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">CURRENT DOMINATOR</span>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-lg md:text-xl font-black ${teamNum === 0 ? 'text-slate-400' : 'text-slate-800 dark:text-slate-100'}">${poi.owner}</span>
                                 </div>
                             </div>
 
-                            <div class="grid grid-cols-2 gap-3">
+                            <div class="grid grid-cols-2 gap-2.5">
                                 ${poi.isBattling ? `
-                                    <div class="bg-red-50 border-2 border-red-200 rounded-lg p-2.5 flex flex-col items-center justify-center relative overflow-hidden">
-                                        <div class="absolute inset-0 crime-tape opacity-20"></div>
-                                        <span class="text-red-700 font-black text-[10px] mb-1 z-10 bg-white/80 px-1 rounded"><i class="fa-solid fa-siren-on animate-pulse"></i> 衝突爆發</span>
-                                        <span class="timer-font text-red-600 text-base md:text-lg font-black z-10 bg-white/80 px-2 rounded border border-red-100" id="battle-timer-${idx}">00:00</span>
+                                    <div class="bg-red-50 dark:bg-red-950/40 border-2 border-red-400 dark:border-red-500/60 rounded-2xl p-2.5 flex flex-col items-center justify-center relative overflow-hidden">
+                                        <div class="absolute inset-0 crime-tape opacity-15"></div>
+                                        <span class="text-red-600 dark:text-red-400 font-black text-[10px] mb-0.5 z-10"><i class="fa-solid fa-siren-on animate-pulse"></i> 衝突爆發</span>
+                                        <span class="timer-font text-red-600 dark:text-red-400 text-base md:text-lg font-black z-10" id="battle-timer-${idx}">00:00</span>
                                     </div>
                                 ` : `
-                                    <div class="bg-slate-50 border-2 border-dashed border-slate-300 rounded-lg p-2.5 flex flex-col items-center justify-center cursor-default select-none">
-                                        <span class="text-[10px] text-slate-400 font-bold mb-1 tracking-widest">佔領時長</span>
-                                        <span class="timer-font text-slate-700 text-sm md:text-base font-bold" id="occ-timer-${idx}">00:00:00</span>
+                                    <div class="border-2 border-dashed border-slate-300 dark:border-slate-800 rounded-2xl p-2.5 flex flex-col items-center justify-center" style="background-color: var(--bg-inner);">
+                                        <span class="text-[9px] text-slate-400 font-bold mb-0.5 tracking-widest">佔領時長</span>
+                                        <span class="timer-font text-slate-700 dark:text-slate-300 text-xs sm:text-sm font-bold" id="occ-timer-${idx}">00:00:00</span>
                                     </div>
                                 `}
-                                <div class="rounded-lg p-2.5 flex flex-col items-center justify-center border-2" id="shield-container-${idx}"></div>
+                                <div class="rounded-2xl p-2.5 flex flex-col items-center justify-center border-2" id="shield-container-${idx}"></div>
                             </div>
                         </div>
                     </div>
@@ -643,9 +800,9 @@
             };
 
             const levelMeta = {
-                S: { label: 'S級 重點調查區', icon: 'fa-star' },
-                A: { label: 'A級 警戒區域', icon: 'fa-exclamation-triangle' },
-                B: { label: 'B級 一般區域', icon: 'fa-search' }
+                S: { label: 'S級 重點核心調查區', icon: 'fa-star' },
+                A: { label: 'A級 警戒交鋒區域', icon: 'fa-exclamation-triangle' },
+                B: { label: 'B級 常規生活區域', icon: 'fa-search' }
             };
 
             let cardsHTML = '';
@@ -655,11 +812,11 @@
                 const meta = levelMeta[level];
                 cardsHTML += `
                     <div class="col-span-full flex items-center gap-3 mt-4 mb-2 first:mt-0">
-                        <div class="bg-slate-800 text-white w-8 h-8 rounded-full flex items-center justify-center shadow-md">
-                            <i class="fa-solid ${meta.icon} text-sm"></i>
+                        <div class="w-8 h-8 rounded-2xl glass-btn flex items-center justify-center text-amber-500 dark:text-amber-400">
+                            <i class="fa-solid ${meta.icon} text-xs"></i>
                         </div>
-                        <span class="text-sm font-black text-slate-700 tracking-widest">${meta.label}</span>
-                        <div class="flex-1 h-0.5 bg-slate-300"></div>
+                        <span class="text-xs sm:text-sm font-black text-slate-700 dark:text-slate-200 tracking-widest">${meta.label}</span>
+                        <div class="flex-1 h-0.5 bg-slate-300 dark:bg-slate-800"></div>
                     </div>
                 `;
                 if (level === 'S') {
@@ -670,14 +827,14 @@
             });
             cardsContainer.innerHTML = cardsHTML;
 
-            // 戰況速覽浮動列
+            // 衝突速報浮動列
             const ticker = document.getElementById('battle-ticker');
             const tickerList = document.getElementById('battle-ticker-list');
             if (battlingPois.length > 0) {
                 ticker.classList.remove('hidden');
                 tickerList.innerHTML = battlingPois.map(({ poi, idx }) => `
-                    <button onclick="document.getElementById('poi-card-${idx}')?.scrollIntoView({behavior:'smooth', block:'center'})" class="shrink-0 flex items-center gap-1.5 bg-white hover:bg-slate-50 border-2 border-red-300 text-slate-700 text-xs font-bold px-3 py-1.5 rounded-full transition btn-shadow">
-                        <span class="w-2 h-2 rounded-full bg-red-500 animate-ping-slow"></span> ${poi.name}
+                    <button onclick="document.getElementById('poi-card-${idx}')?.scrollIntoView({behavior:'smooth', block:'center'})" class="shrink-0 flex items-center gap-1.5 glass-btn glass-btn-red text-white text-xs font-bold px-3 py-1.5 rounded-full transition">
+                        <span class="w-2 h-2 rounded-full bg-red-400 animate-ping"></span> ${poi.name}
                     </button>
                 `).join('');
             } else {
@@ -685,7 +842,7 @@
                 tickerList.innerHTML = '';
             }
 
-            // Admin Dashboard Rendering
+            // 後台控制面板渲染
             if (adminRole) {
                 const globalTools = document.getElementById('admin-global-tools');
                 const syncTools = document.getElementById('admin-sync-tools');
@@ -697,7 +854,7 @@
                     syncTools.classList.remove('hidden');
                     dangerZone.classList.remove('hidden');
                     dangerZone.classList.add('flex');
-                    roleTitle.innerText = "警視廳指揮中心";
+                    roleTitle.innerText = "警視廳指揮中心 (最高權限)";
                 } else {
                     globalTools.classList.add('hidden');
                     syncTools.classList.add('hidden');
@@ -714,34 +871,34 @@
                     const isPoiProtected = poi.protectedUntil > Date.now();
 
                     return `
-                    <div class="bg-white border-2 border-slate-200 p-4 rounded-xl flex flex-col gap-3 relative btn-shadow ${poi.isBattling ? 'border-red-400 ring-2 ring-red-100' : ''}">
-                        <div class="flex justify-between items-center border-b-2 border-slate-100 pb-2">
-                            <span class="text-slate-800 font-black text-sm flex items-center gap-2">
-                                <i class="fa-solid fa-folder-open text-slate-400"></i> ${poi.name} 
-                                <button onclick="window.renamePoi(${idx})" class="text-slate-400 hover:text-blue-700 transition" title="修改名稱"><i class="fa-solid fa-pen text-[10px]"></i></button>
-                                <span class="bg-slate-100 text-slate-500 text-[10px] px-1.5 py-0.5 rounded border border-slate-200">${poi.level}級</span>
+                    <div class="border-2 border-slate-300 dark:border-slate-800 p-4 rounded-3xl flex flex-col gap-3 relative ${poi.isBattling ? 'border-red-500 ring-2 ring-red-500/20' : ''}" style="background-color: var(--bg-card);">
+                        <div class="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-2.5">
+                            <span class="text-slate-800 dark:text-slate-100 font-black text-sm flex items-center gap-2">
+                                <i class="fa-solid fa-folder-open text-blue-700 dark:text-sky-400"></i> ${poi.name} 
+                                <button onclick="window.renamePoi(${idx})" class="text-slate-400 hover:text-sky-400 transition" title="修改名稱"><i class="fa-solid fa-pen text-[10px]"></i></button>
+                                <span class="text-[10px] px-2 py-0.5 rounded-lg level-badge-${poi.level}">${poi.level}級</span>
                             </span>
                             <div class="flex gap-2">
-                                <button onclick="window.toggleHide(${idx})" class="text-sm w-8 h-8 flex items-center justify-center rounded-lg ${poi.isHidden ? 'bg-red-100 text-red-600 border border-red-200' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'} transition shadow-sm" title="封存/解封">
+                                <button onclick="window.toggleHide(${idx})" class="w-8 h-8 rounded-xl glass-btn flex items-center justify-center ${poi.isHidden ? 'text-red-500 border-red-500/50' : 'text-slate-400'}" title="封存/解封">
                                     <i class="fa-solid ${poi.isHidden ? 'fa-eye-slash' : 'fa-eye'}"></i>
                                 </button>
-                                <button onclick="window.toggleBattle(${idx})" class="text-xs px-4 py-1.5 rounded-lg font-black transition btn-shadow border-2 ${poi.isBattling ? 'bg-red-600 text-white border-red-700 hover:bg-red-700 animate-pulse' : (isPoiProtected ? 'bg-slate-200 text-slate-400 border-slate-300 cursor-not-allowed' : 'bg-yellow-400 text-yellow-900 border-yellow-500 hover:bg-yellow-500 active:scale-95')}" ${(!poi.isBattling && isPoiProtected) ? 'disabled title="封鎖期間無法介入"' : ''}>
+                                <button onclick="window.toggleBattle(${idx})" class="glass-btn ${poi.isBattling ? 'glass-btn-red animate-pulse' : (isPoiProtected ? 'opacity-40 cursor-not-allowed' : 'glass-btn-amber')} px-3.5 py-1 rounded-xl text-xs font-black" ${(!poi.isBattling && isPoiProtected) ? 'disabled' : ''}>
                                     ${poi.isBattling ? '🛑 終止衝突' : '⚔️ 判定衝突'}
                                 </button>
                             </div>
                         </div>
 
                         <div class="flex flex-col gap-1">
-                            <label class="text-[10px] font-bold text-slate-400">當前佔領小隊</label>
-                            <select id="admin-select-${idx}" onchange="window.confirmManualChange(${idx})" class="bg-slate-50 border-2 border-slate-300 text-slate-700 font-bold rounded-lg px-3 py-2 text-sm w-full outline-none cursor-pointer hover:border-[#1e3a8a] transition shadow-inner ${poi.isBattling ? 'bg-slate-200 text-slate-400 cursor-not-allowed border-slate-200' : ''}" ${poi.isBattling ? 'disabled' : ''}>
+                            <label class="text-[10px] font-bold text-slate-500 dark:text-slate-400">指派佔領隊伍：</label>
+                            <select id="admin-select-${idx}" onchange="window.confirmManualChange(${idx})" class="border-2 rounded-2xl px-3 py-2 text-xs font-bold outline-none cursor-pointer focus:border-sky-400 transition ${poi.isBattling ? 'opacity-50 cursor-not-allowed' : ''}" style="background-color: var(--input-bg); border-color: var(--input-border); color: var(--input-text);" ${poi.isBattling ? 'disabled' : ''}>
                                 ${["未佔領", "第 1 小隊", "第 2 小隊", "第 3 小隊", "第 4 小隊", "第 5 小隊", "第 6 小隊"].map(opt => `<option value="${opt}" ${poi.owner === opt ? 'selected' : ''}>${opt}</option>`).join('')}
                             </select>
                         </div>
 
                         <div class="flex gap-2 pt-1">
-                            <button onclick="window.setShield(${idx}, 5)" class="flex-1 ${poi.isBattling ? 'bg-slate-100 text-slate-300 border-slate-200 cursor-not-allowed' : 'bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-700'} border-2 py-2 rounded-lg text-xs font-bold transition btn-shadow" ${poi.isBattling ? 'disabled' : ''}><i class="fa-solid fa-shield mr-1"></i>5m 封鎖</button>
-                            <button onclick="window.setShield(${idx}, 10)" class="flex-1 ${poi.isBattling ? 'bg-slate-100 text-slate-300 border-slate-200 cursor-not-allowed' : 'bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-700'} border-2 py-2 rounded-lg text-xs font-bold transition btn-shadow" ${poi.isBattling ? 'disabled' : ''}><i class="fa-solid fa-shield-halved mr-1"></i>10m 封鎖</button>
-                            <button onclick="window.setShield(${idx}, 0)" class="w-10 bg-slate-100 hover:bg-slate-200 border-2 border-slate-300 text-slate-500 py-2 rounded-lg flex items-center justify-center transition btn-shadow" title="解除封鎖"><i class="fa-solid fa-unlock"></i></button>
+                            <button onclick="window.setShield(${idx}, 5)" class="flex-1 glass-btn glass-btn-blue py-2 rounded-2xl text-xs font-bold ${poi.isBattling ? 'opacity-40 cursor-not-allowed' : ''}" ${poi.isBattling ? 'disabled' : ''}><i class="fa-solid fa-shield mr-1"></i>5m 封鎖</button>
+                            <button onclick="window.setShield(${idx}, 10)" class="flex-1 glass-btn glass-btn-blue py-2 rounded-2xl text-xs font-bold ${poi.isBattling ? 'opacity-40 cursor-not-allowed' : ''}" ${poi.isBattling ? 'disabled' : ''}><i class="fa-solid fa-shield-halved mr-1"></i>10m 封鎖</button>
+                            <button onclick="window.setShield(${idx}, 0)" class="w-10 glass-btn rounded-2xl text-slate-400 py-2 flex items-center justify-center" title="解除封鎖"><i class="fa-solid fa-unlock"></i></button>
                         </div>
                     </div>
                 `}).join('');
@@ -751,7 +908,7 @@
             updateDynamicData(); 
         }
 
-        // --- Timers Logic ---
+        // --- 計時器邏輯 ---
         function updateDynamicData() {
             if (!currentState) return;
             const now = Date.now();
@@ -766,14 +923,15 @@
                         const diff = poi.protectedUntil - now;
                         const m = Math.floor(diff / 60000).toString().padStart(2, '0');
                         const s = Math.floor((diff % 60000) / 1000).toString().padStart(2, '0');
-                        shieldContainer.className = "bg-blue-50 border-2 border-dashed border-blue-300 rounded-lg p-2.5 flex flex-col items-center justify-center cursor-default select-none";
-                        shieldContainer.innerHTML = `<span class="text-blue-700 font-black text-[10px] mb-1 tracking-widest"><i class="fa-solid fa-lock"></i> 現場封鎖中</span><span class="timer-font text-blue-600 text-sm font-bold">${m}:${s}</span>`;
+                        shieldContainer.className = "bg-blue-50 dark:bg-sky-950/40 border-2 border-dashed border-blue-300 dark:border-sky-500/50 rounded-2xl p-2.5 flex flex-col items-center justify-center";
+                        shieldContainer.innerHTML = `<span class="text-blue-700 dark:text-sky-400 font-black text-[9px] mb-0.5 tracking-widest"><i class="fa-solid fa-lock"></i> 現場封鎖中</span><span class="timer-font text-blue-600 dark:text-sky-300 text-xs sm:text-sm font-bold">${m}:${s}</span>`;
                     } else if (poi.isBattling) {
-                        shieldContainer.className = "bg-red-50 border-2 border-dashed border-red-300 rounded-lg p-2.5 flex flex-col items-center justify-center cursor-default select-none";
-                        shieldContainer.innerHTML = `<span class="text-red-600 font-black text-[10px] mb-1 tracking-widest"><i class="fa-solid fa-triangle-exclamation"></i> 衝突處理中</span><span class="text-red-400 text-xs font-bold">無法介入</span>`;
+                        shieldContainer.className = "bg-red-50 dark:bg-red-950/40 border-2 border-dashed border-red-300 dark:border-red-500/50 rounded-2xl p-2.5 flex flex-col items-center justify-center";
+                        shieldContainer.innerHTML = `<span class="text-red-600 dark:text-red-400 font-black text-[9px] mb-0.5 tracking-widest"><i class="fa-solid fa-triangle-exclamation"></i> 衝突處理中</span><span class="text-red-500 dark:text-red-400/80 text-xs font-bold">交火封鎖</span>`;
                     } else {
-                        shieldContainer.className = "bg-slate-50 border-2 border-dashed border-slate-300 rounded-lg p-2.5 flex flex-col items-center justify-center cursor-default select-none";
-                        shieldContainer.innerHTML = `<span class="text-slate-400 font-bold text-[10px] mb-1 tracking-widest">區域狀態</span><span class="text-green-600 text-xs font-black"><i class="fa-solid fa-check-circle mr-1"></i>可進行搜查</span>`;
+                        shieldContainer.className = "border-2 border-dashed border-slate-300 dark:border-slate-800 rounded-2xl p-2.5 flex flex-col items-center justify-center";
+                        shieldContainer.style.backgroundColor = "var(--bg-inner)";
+                        shieldContainer.innerHTML = `<span class="text-slate-400 font-bold text-[9px] mb-0.5 tracking-widest">區域狀態</span><span class="text-emerald-600 dark:text-emerald-400 text-xs font-black"><i class="fa-solid fa-check-circle mr-1"></i>可挑戰</span>`;
                     }
                 }
 
@@ -789,10 +947,10 @@
                         const m = Math.floor((totalMs % 3600000) / 60000).toString().padStart(2, '0');
                         const s = Math.floor((totalMs % 60000) / 1000).toString().padStart(2, '0');
                         occTimer.innerText = `${h}:${m}:${s}`;
-                        occTimer.className = "timer-font text-slate-700 text-sm md:text-base font-bold";
+                        occTimer.className = "timer-font text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-bold";
                     } else {
                         occTimer.innerText = `--:--:--`;
-                        occTimer.className = "timer-font text-slate-300 text-sm md:text-base font-bold";
+                        occTimer.className = "timer-font text-slate-400 dark:text-slate-600 text-xs sm:text-sm font-bold";
                     }
                 }
 
@@ -806,7 +964,7 @@
             });
         }
 
-        // --- Game Logic (Scoring & Battles) ---
+        // --- 結算公式 ---
         function calculateScore(ms, income) {
             const mins = ms / 60000;
             return Math.floor(mins / 10) * income; 
@@ -820,7 +978,7 @@
 
             if (!poi.isBattling) {
                 if (poi.protectedUntil > now) {
-                    showModal('<i class="fa-solid fa-shield-halved text-blue-500"></i> 封鎖中', '此區域目前由警方封鎖保護中，無法進行攻防！');
+                    showModal('<i class="fa-solid fa-shield-halved text-sky-400"></i> 封鎖中', '此區域目前處於封鎖保護期，無法進行攻防！');
                     return;
                 }
                 if (poi.owner !== '未佔領' && poi.lastStartTime > 0) {
@@ -834,9 +992,9 @@
                 const options = ["未佔領", "第 1 小隊", "第 2 小隊", "第 3 小隊", "第 4 小隊", "第 5 小隊", "第 6 小隊"]
                     .map(opt => `<option value="${opt}" ${poi.owner === opt ? 'selected' : ''}>${opt} ${poi.owner === opt ? '(防守方)' : ''}</option>`).join('');
                 
-                const selectHtml = `<div class="mt-4 text-left"><label class="text-sm font-bold text-slate-600 mb-2 block"><i class="fa-solid fa-gavel text-slate-400"></i> 判定最終掌控小隊：</label><select id="winner-select-${idx}" class="w-full bg-slate-50 border-2 border-slate-300 rounded-lg px-3 py-2 text-slate-800 outline-none focus:border-[#1e3a8a] text-base cursor-pointer font-bold shadow-sm">${options}</select></div>`;
+                const selectHtml = `<div class="mt-4 text-left"><label class="text-xs font-bold text-slate-700 dark:text-slate-300 mb-2 block"><i class="fa-solid fa-gavel text-amber-500"></i> 判定最終掌控小隊：</label><select id="winner-select-${idx}" class="w-full rounded-2xl px-3.5 py-2.5 outline-none focus:border-sky-400 text-sm font-bold border-2" style="background-color: var(--input-bg); border-color: var(--input-border); color: var(--input-text);">${options}</select></div>`;
                 
-                const isConfirmed = await showModal('<i class="fa-solid fa-scale-balanced text-slate-700"></i> 衝突結算', `【${poi.name}】衝突已結束，請進行結算！<br>${selectHtml}`, false, true);
+                const isConfirmed = await showModal('<i class="fa-solid fa-scale-balanced text-amber-500"></i> 衝突結算判定', `【${poi.name}】交火已結束，請進行結算！<br>${selectHtml}`, false, true);
                 
                 if (isConfirmed) {
                     const newOwner = document.getElementById(`winner-select-${idx}`).value;
@@ -846,7 +1004,7 @@
                         poi.battleStartTime = 0;
                         if(poi.owner !== '未佔領') poi.lastStartTime = now;
                         await updateDoc(gameRef, { pois: newPois });
-                        showModal('<i class="fa-solid fa-shield-check text-green-500"></i> 防守成功', `【${poi.name}】由原小隊守住，搜查時間繼續累積！`);
+                        showModal('<i class="fa-solid fa-shield-check text-green-500"></i> 防守成功', `【${poi.name}】由原小隊守住，佔領時長繼續累積！`);
                     } else {
                         let newTeams = JSON.parse(JSON.stringify(currentState.teams));
                         if (poi.owner !== '未佔領') {
@@ -865,7 +1023,7 @@
                         poi.protectedUntil = 0; 
                         
                         await updateDoc(gameRef, { pois: newPois, teams: newTeams });
-                        showModal('<i class="fa-solid fa-check-circle text-green-500"></i> 權限轉移完成', `該區域已移交給【${newOwner}】，前任小隊資金已結算入帳！`);
+                        showModal('<i class="fa-solid fa-check-circle text-green-500"></i> 權限轉移完成', `該據點已由【${newOwner}】掌控，前任小隊收益已結算入帳！`);
                     }
                 }
             }
@@ -880,7 +1038,7 @@
 
             if (newOwner === poi.owner) return;
 
-            const isConfirmed = await showModal('<i class="fa-solid fa-bolt text-yellow-500"></i> 強制變更與結算', `確定要將區域控制權強制轉移給【${newOwner}】並結算原小隊嗎？`, false, true);
+            const isConfirmed = await showModal('<i class="fa-solid fa-bolt text-amber-500"></i> 強制更動確認', `確定要將區域控制權強制指派給【${newOwner}】並結算原小隊嗎？`, false, true);
             if (isConfirmed) {
                 const newPois = JSON.parse(JSON.stringify(currentState.pois));
                 let newTeams = JSON.parse(JSON.stringify(currentState.teams));
@@ -901,22 +1059,19 @@
                 activePoi.protectedUntil = 0;
 
                 await updateDoc(gameRef, { pois: newPois, teams: newTeams });
-                showModal('<i class="fa-solid fa-check text-green-500"></i> 變更成功', `手動結算與移交完畢！`);
+                showModal('<i class="fa-solid fa-check text-green-500"></i> 變更成功', `手動結算與指派已完成！`);
             } else {
                 selectElem.value = poi.owner; 
             }
         };
 
-        // --- Admin Tools ---
         window.renamePoi = async (idx) => {
             if(!currentState) return;
             const poi = currentState.pois[idx];
             const newName = await showModal(
-                '<i class="fa-solid fa-pen text-blue-500"></i> 變更據點名稱', 
+                '<i class="fa-solid fa-pen text-blue-700 dark:text-sky-400"></i> 變更據點名稱', 
                 `請為【${poi.name}】輸入新的據點名稱：`, 
-                true, 
-                false, 
-                'text'
+                true, false, 'text'
             );
             if (newName && newName.trim() !== '' && newName.trim() !== poi.name) {
                 const newPois = JSON.parse(JSON.stringify(currentState.pois));
@@ -936,7 +1091,7 @@
             if(!currentState) return;
             const newPois = [...currentState.pois];
             if (newPois[idx].isBattling && mins > 0) {
-                showModal('<i class="fa-solid fa-ban text-red-500"></i> 拒絕執行', '衝突處理中，無法拉起封鎖線！');
+                showModal('<i class="fa-solid fa-ban text-red-500"></i> 拒絕執行', '交火衝突處理中，無法架設防護封鎖！');
                 return;
             }
             newPois[idx].protectedUntil = mins > 0 ? Date.now() + (mins * 60000) : 0;
@@ -945,10 +1100,10 @@
 
         window.resetGame = async () => {
             if (adminRole !== 'super') return;
-            const pwd = await showModal('<i class="fa-solid fa-triangle-exclamation text-red-600"></i> 重置警告', '確定要銷毀所有卷宗並歸零狀態嗎？此動作無法復原！<br>請輸入最高權限密碼：', true, false, 'password');
+            const pwd = await showModal('<i class="fa-solid fa-triangle-exclamation text-red-500"></i> 重置警告', '確定要銷毀所有戰略卷宗並歸零所有據點狀態嗎？此動作無法復原！<br>請輸入最高權限密碼：', true, false, 'password');
             if(pwd === '1150920') { 
                 await setDoc(gameRef, defaultState);
-                showModal('<i class="fa-solid fa-check text-green-500"></i> 系統已重置', '全案已清空，恢復為初始狀態。');
+                showModal('<i class="fa-solid fa-check text-green-500"></i> 系統已重置', '全案數據已清空，恢復為初始戰略狀態。');
             } else if (pwd !== null) {
                 showModal('<i class="fa-solid fa-xmark text-red-500"></i> 密碼錯誤', '權限驗證失敗，拒絕執行。');
             }
@@ -957,18 +1112,26 @@
         window.pushAlert = async () => {
             if (adminRole !== 'super') return;
             const input = document.getElementById('admin-alert-input');
-            if(input.value.trim()) await updateDoc(gameRef, { alertMsg: input.value.trim() });
-            input.value = '';
+            const msg = input.value.trim();
+            if (msg) {
+                try {
+                    await updateDoc(gameRef, { alertMsg: msg });
+                    input.value = '';
+                    alert('✅ 廣播通報已同步推播至全域大螢幕！');
+                } catch(e) {
+                    console.error("廣播失敗: ", e);
+                }
+            }
         };
         window.clearAlert = async () => { 
             if (adminRole !== 'super') return;
             await updateDoc(gameRef, { alertMsg: "" }); 
         };
 
+        // --- 傳送分數至宿營總計分板 ---
         window.sendScoresToCampingSystem = async () => {
             if (!currentState || !currentState.teams) return;
 
-            // 1. 打包 6 個小隊的分數資料
             const scoreData = {};
             const params = new URLSearchParams();
 
@@ -978,25 +1141,21 @@
                 params.append(teamKey, t.wealth);
             });
 
-            // 2. 存入同網域共用的 LocalStorage
             localStorage.setItem('g5_warfare_scores', JSON.stringify({
                 updatedAt: Date.now(),
                 teams: currentState.teams,
                 scoreMap: scoreData
             }));
 
-            // 3. 組合目標網址
             const targetBaseUrl = "https://owenlin102006-commits.github.io/Camping-Point-Calculation/";
             const targetFullUrl = `${targetBaseUrl}?${params.toString()}`;
 
-            // 4. 彈窗確認並開啟
             const confirm = await showModal(
-                '<i class="fa-solid fa-paper-plane text-blue-600"></i> 分數傳送確認',
-                `即將把以下戰果匯出至總計分板：<br><br>` +
-                currentState.teams.map(t => `<span class="inline-block bg-slate-100 rounded px-2 py-1 m-1 text-sm font-bold border border-slate-300 text-slate-700">${t.name}: <span class="text-yellow-600">$${t.wealth}</span></span>`).join('') +
-                `<br><br><span class="text-red-600 font-bold mt-2 inline-block">點擊「確認執行」將另開新視窗並自動帶入分數！</span>`,
-                false,
-                true
+                '<i class="fa-solid fa-paper-plane text-sky-400"></i> 分數結算同步確認',
+                `即將把以下各小隊戰果匯出至宿營總計分板：<br><br>` +
+                currentState.teams.map(t => `<span class="inline-block rounded-xl px-2.5 py-1 m-1 text-xs font-bold border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200" style="background-color: var(--bg-inner);">${t.name}: <span class="text-amber-600 dark:text-amber-400 font-mono font-black">$${t.wealth}</span></span>`).join('') +
+                `<br><br><span class="text-blue-700 dark:text-sky-400 font-bold mt-2 inline-block">點擊「確認執行」將自動開啟總計分板並帶入分數！</span>`,
+                false, true
             );
 
             if (confirm) {
@@ -1004,34 +1163,30 @@
             }
         };
 
-
-        // --- Auth & UI Interactions ---
+        // --- 權限登入與介面切換 ---
         window.setMobileTab = (tab) => {
             triggerHaptic('light');
             const adminSec = document.getElementById('admin-section');
             const statusSec = document.getElementById('status-section');
             const tabStatusBtn = document.getElementById('tab-status-btn');
             const tabAdminBtn = document.getElementById('tab-admin-btn');
-            
-            const activeCls = ['bg-[#1e3a8a]', 'text-white', 'border-[#1e3a8a]'];
-            const inactiveCls = ['bg-white', 'text-slate-600', 'border-slate-300'];
 
             if (tab === 'admin') {
                 statusSec.classList.add('max-xl:hidden');
                 adminSec.classList.remove('max-xl:hidden');
-                tabAdminBtn.classList.remove(...inactiveCls); tabAdminBtn.classList.add(...activeCls);
-                tabStatusBtn.classList.remove(...activeCls); tabStatusBtn.classList.add(...inactiveCls);
+                tabAdminBtn.className = "glass-btn glass-btn-blue py-3 rounded-2xl text-sm font-black";
+                tabStatusBtn.className = "glass-btn py-3 rounded-2xl text-sm font-bold text-slate-600 dark:text-slate-300";
             } else {
                 adminSec.classList.add('max-xl:hidden');
                 statusSec.classList.remove('max-xl:hidden');
-                tabStatusBtn.classList.remove(...inactiveCls); tabStatusBtn.classList.add(...activeCls);
-                tabAdminBtn.classList.remove(...activeCls); tabAdminBtn.classList.add(...inactiveCls);
+                tabStatusBtn.className = "glass-btn glass-btn-blue py-3 rounded-2xl text-sm font-black";
+                tabAdminBtn.className = "glass-btn py-3 rounded-2xl text-sm font-bold text-slate-600 dark:text-slate-300";
             }
         };
 
         document.getElementById('admin-login-btn').onclick = async () => {
             triggerHaptic('medium');
-            const pwd = await showModal('<i class="fa-solid fa-id-card-clip text-slate-700"></i> 搜查官身分驗證', '請出示您的專屬授權碼以存取警視廳終端：', true);
+            const pwd = await showModal('<i class="fa-solid fa-id-card-clip text-sky-400"></i> 搜查官身分驗證', '請輸入您的專屬搜查官密鑰以登入終端：', true);
             
             if (rolePasswords[pwd]) {
                 adminRole = rolePasswords[pwd];
@@ -1039,16 +1194,15 @@
                 document.getElementById('status-section').classList.replace('xl:col-span-12', 'xl:col-span-7'); 
                 document.getElementById('admin-login-btn').classList.add('hidden');
                 document.getElementById('admin-logout-btn').classList.remove('hidden');
-                document.getElementById('admin-logout-btn').classList.add('flex');
                 document.getElementById('mobile-tab-bar').classList.remove('hidden');
                 window.setMobileTab('status');
                 
-                let roleName = adminRole === 'super' ? '警視總監' : `現場搜查官 (${currentState.pois.find(p=>p.id === adminRole).name})`;
+                let roleName = adminRole === 'super' ? '警視總監 (指揮官)' : `現場搜查官 (${currentState.pois.find(p=>p.id === adminRole).name})`;
                 showModal('<i class="fa-solid fa-check-circle text-green-500"></i> 驗證通過', `歡迎登入，${roleName}。`);
                 
                 if (currentState) renderUI();
             } else if (pwd !== null) {
-                showModal('<i class="fa-solid fa-circle-xmark text-red-500"></i> 存取被拒', '查無此授權碼。');
+                showModal('<i class="fa-solid fa-circle-xmark text-red-500"></i> 存取被拒', '查無此搜查授權碼。');
             }
         };
 
@@ -1061,7 +1215,6 @@
             document.getElementById('status-section').classList.replace('xl:col-span-7', 'xl:col-span-12');
             document.getElementById('admin-login-btn').classList.remove('hidden');
             document.getElementById('admin-logout-btn').classList.add('hidden');
-            document.getElementById('admin-logout-btn').classList.remove('flex');
             document.getElementById('mobile-tab-bar').classList.add('hidden');
             if (currentState) renderUI();
         };
@@ -1076,7 +1229,7 @@
             reader.readAsDataURL(file);
         });
 
-        // 鎖定重置按鈕長按邏輯
+        // 鎖定重置長按 2 秒邏輯
         (() => {
             const btn = document.getElementById('reset-game-btn');
             const progress = document.getElementById('reset-progress');
@@ -1098,6 +1251,29 @@
             btn.addEventListener('touchstart', (e) => { e.preventDefault(); startHold(e); }, { passive: false });
             ['mouseup', 'mouseleave', 'touchend', 'touchcancel'].forEach(evt => btn.addEventListener(evt, cancelHold));
         })();
+
+        // 🌟 日間/夜間模式切換管理
+        window.toggleTheme = () => {
+            triggerHaptic('light');
+            document.body.classList.toggle('dark-mode');
+            const isDark = document.body.classList.contains('dark-mode');
+            const btn = document.getElementById('themeBtn');
+            btn.innerHTML = isDark ? `<i class="fa-solid fa-sun"></i>` : `<i class="fa-solid fa-moon text-slate-700"></i>`;
+            localStorage.setItem('g5_theme', isDark ? 'dark' : 'light');
+            if (currentState) renderUI();
+        };
+
+        // 載入偏好色彩主題
+        const savedTheme = localStorage.getItem('g5_theme');
+        if (savedTheme === 'light') {
+            document.body.classList.remove('dark-mode');
+            const btn = document.getElementById('themeBtn');
+            if (btn) btn.innerHTML = `<i class="fa-solid fa-moon text-slate-700"></i>`;
+        } else {
+            document.body.classList.add('dark-mode');
+            const btn = document.getElementById('themeBtn');
+            if (btn) btn.innerHTML = `<i class="fa-solid fa-sun"></i>`;
+        }
     </script>
 </body>
-</html>
+</html>ㄋ
