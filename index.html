@@ -280,7 +280,7 @@
         <div id="battle-ticker-list" class="flex items-center gap-2"></div>
     </div>
 
-    <!-- 📡 頂部指揮中樞 Header (已修正：G5-1 完整顯示且不被裁切) -->
+    <!-- 📡 頂部指揮中樞 Header (G5-1 完整獨立呈現) -->
     <header class="max-w-[1400px] mx-auto flex justify-between items-center mb-6 pb-4 border-b-4 border-blue-900 dark:border-sky-500">
         <div class="flex items-center gap-3 md:gap-4">
             <!-- 🌟 獨立圖層包裝：徹底解決 G5-1 被 overflow:hidden 切除的問題 -->
@@ -743,12 +743,13 @@
                 if (poi.isBattling) battlingPois.push({ poi, idx });
             });
 
+            // 🌟 修正版 renderCard：標題高亮色統一為 text-sky-400
             const renderCard = ({ poi, idx }, big = false) => {
                 let teamNum = 0;
                 if (poi.owner.includes("第")) teamNum = parseInt(poi.owner.match(/\d+/)[0]);
 
                 return `
-                    <div id="poi-card-${idx}" onclick="window.openPoiDetail(${idx})" class="card-shadow rounded-3xl flex flex-col relative transition-all cursor-pointer group hover:border-blue-700 dark:hover:border-sky-400 active:scale-[0.99] border-2 ${poi.isBattling ? 'border-red-500 shadow-[0_0_25px_rgba(239,68,68,0.35)]' : 'border-slate-300 dark:border-slate-800'}">
+                    <div id="poi-card-${idx}" onclick="window.openPoiDetail(${idx})" class="card-shadow rounded-3xl flex flex-col relative transition-all cursor-pointer group hover:border-sky-400 active:scale-[0.99] border-2 ${poi.isBattling ? 'border-red-500 shadow-[0_0_25px_rgba(239,68,68,0.35)]' : 'border-slate-300 dark:border-slate-800'}">
                         
                         <div class="absolute -top-[2px] -left-[2px] bg-slate-800 dark:bg-slate-900 text-white text-[10px] font-bold px-3 py-1 folder-tab z-10 border-b border-r border-slate-600 dark:border-slate-700 flex items-center gap-1.5">
                             FILE: ${poi.id} <i class="fa-solid fa-up-right-and-down-left-from-center text-[8px] text-sky-400 opacity-0 group-hover:opacity-100 transition"></i>
@@ -759,8 +760,9 @@
                         <div class="${big ? 'p-5 md:p-6' : 'p-4 sm:p-5'} flex-1">
                             <div class="flex justify-between items-start mb-4 mt-2">
                                 <div class="flex flex-col items-start gap-1">
-                                    <h3 class="${big ? 'text-xl md:text-2xl' : 'text-lg md:text-xl'} font-black text-slate-800 dark:text-slate-100 leading-tight group-hover:text-blue-700 dark:group-hover:text-sky-400 transition flex items-center gap-2">
-                                        ${poi.name} <i class="fa-solid fa-magnifying-glass-plus text-xs text-slate-400 group-hover:text-sky-400"></i>
+                                    <!-- 🌟 標題高亮色修正：使用 text-blue-900 dark:text-sky-400 -->
+                                    <h3 class="${big ? 'text-xl md:text-2xl' : 'text-lg md:text-xl'} font-black text-blue-900 dark:text-sky-400 leading-tight group-hover:text-amber-400 transition flex items-center gap-2">
+                                        ${poi.name} <i class="fa-solid fa-magnifying-glass-plus text-xs text-sky-400/70 group-hover:text-amber-400"></i>
                                     </h3>
                                     <span class="px-2.5 py-0.5 rounded-lg text-[10px] font-black level-badge-${poi.level} tracking-widest">${poi.level} CLASS</span>
                                 </div>
@@ -789,7 +791,7 @@
                                 ` : `
                                     <div class="border-2 border-dashed border-slate-300 dark:border-slate-800 rounded-2xl p-2.5 flex flex-col items-center justify-center" style="background-color: var(--bg-inner);">
                                         <span class="text-[9px] text-slate-400 font-bold mb-0.5 tracking-widest">佔領時長</span>
-                                        <span class="timer-font text-slate-700 dark:text-slate-300 text-xs sm:text-sm font-bold" id="occ-timer-${idx}">00:00:00</span>
+                                        <span class="timer-font text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-bold" id="occ-timer-${idx}">00:00:00</span>
                                     </div>
                                 `}
                                 <div class="rounded-2xl p-2.5 flex flex-col items-center justify-center border-2" id="shield-container-${idx}"></div>
@@ -815,7 +817,7 @@
                         <div class="w-8 h-8 rounded-2xl glass-btn flex items-center justify-center text-amber-500 dark:text-amber-400">
                             <i class="fa-solid ${meta.icon} text-xs"></i>
                         </div>
-                        <span class="text-xs sm:text-sm font-black text-slate-700 dark:text-slate-200 tracking-widest">${meta.label}</span>
+                        <span class="text-xs sm:text-sm font-black text-slate-800 dark:text-sky-300 tracking-widest">${meta.label}</span>
                         <div class="flex-1 h-0.5 bg-slate-300 dark:bg-slate-800"></div>
                     </div>
                 `;
